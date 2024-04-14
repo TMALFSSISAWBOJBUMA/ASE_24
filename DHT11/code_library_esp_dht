@@ -1,0 +1,28 @@
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "driver/gpio.h"
+#include "esp_log.h"
+#include "esp_dht.h"  // Biblioteka do obsługi czujnika DHT11
+
+#define DHT_PIN  4  // Pin GPIO, do którego podłączony jest moduł z czujnikiem DHT11
+#define DHT_TYPE DHT11  // Typ czujnika (DHT11 lub DHT22)
+
+static const char *TAG = "DHT11";
+
+void dht_task(void *pvParameter) {
+    while(1) {
+        float humidity, temperature;
+        esp_err_t ret = dht_read_data(DHT_TYPE, DHT_PIN, &humidity, &temperature);
+        if (ret == ESP_OK) {
+            ESP_LOGI(TAG, "Temperature: %.1f°C, Humidity: %.1f%%", temperature, humidity);
+        } else {
+            ESP_LOGE(TAG, "Failed to read data from DHT11");
+        }
+        vTaskDelay(pdMS_TO_TICKS(2000)); // Odczyt co 2 sekundy
+    }
+}
+
+void app_main() {
+    ESP_ERROR_CHECK(gpio_install_isr_service(0)); // Instalacja usługi obsługi przerwań GPIO
+    xTaskCreate(&dht_task, "dht_task", configMINIMAL_STACK_SIZE * 3, NULL, 5, NULL);
+}
