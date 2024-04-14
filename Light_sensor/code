@@ -1,0 +1,34 @@
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "driver/adc.h"
+#include "esp_log.h"
+
+#define LDR_PIN ADC1_CHANNEL_0  // Kanał ADC, do którego podłączony jest czujnik LDR
+
+static const char *TAG = "LDR";
+
+void ldr_task(void *pvParameter) {
+    uint32_t adc_reading;
+    float ldr_voltage;
+
+    while(1) {
+        // Odczytaj wartość analogową z czujnika LDR
+        adc_reading = adc1_get_raw(LDR_PIN);
+        
+        // Przekształć odczytaną wartość na napięcie
+        ldr_voltage = adc_reading * (3.3 / 4096.0);
+        
+        ESP_LOGI(TAG, "Napięcie na LDR: %.2f V", ldr_voltage);
+        
+        vTaskDelay(pdMS_TO_TICKS(1000)); // Odczyt co 1 sekundę
+    }
+}
+
+void app_main() {
+    // Konfiguracja konwertera analogowo-cyfrowego (ADC)
+    adc1_config_width(ADC_WIDTH_BIT_12);
+    adc1_config_channel_atten(LDR_PIN, ADC_ATTEN_DB_0);
+
+    // Utworzenie zadania do odczytu wartości LDR
+    xTaskCreate(&ldr_task, "ldr_task", configMINIMAL_STACK_SIZE * 3, NULL, 5, NULL);
+}
