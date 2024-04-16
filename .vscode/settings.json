@@ -19,6 +19,7 @@
     "idf.flashType": "UART",
     "files.associations": {
         "esp_err.h": "c",
-        "task.h": "c"
+        "task.h": "c",
+        "ultrasonic.h": "c"
     }
 }
