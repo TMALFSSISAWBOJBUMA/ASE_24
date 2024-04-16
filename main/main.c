@@ -4,6 +4,7 @@
 #include <freertos/task.h>
 #include <ultrasonic.h>
 #include <esp_err.h>
+#include <dht11.h>
 
 #define MAX_DISTANCE_CM 500 // 5m max
 
