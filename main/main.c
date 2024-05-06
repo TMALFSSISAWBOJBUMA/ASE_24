@@ -10,7 +10,10 @@
 
 #define MAX_DISTANCE_CM 500 // 5m max
 
-void ultrasonic_test(void *pvParameters)
+float front_distance = 1.0;  
+float humidity, temperature = 23.0;
+
+void measure_distance(void *pvParameters)
 {
     ultrasonic_sensor_t sensor = {
         .trigger_pin = TRIGGER_PIN,
@@ -21,8 +24,8 @@ void ultrasonic_test(void *pvParameters)
 
     while (true)
     {
-        float distance;
-        esp_err_t res = ultrasonic_measure(&sensor, MAX_DISTANCE_CM, &distance);
+        float front_distance;
+        esp_err_t res = ultrasonic_measure_temp_compensated(&sensor, MAX_DISTANCE_CM, &front_distance, temperature);
         if (res != ESP_OK)
         {
             printf("Error %d: ", res);
@@ -41,19 +44,17 @@ void ultrasonic_test(void *pvParameters)
                     printf("%s\n", esp_err_to_name(res));
             }
         }
-        else
-            printf("Distance: %0.04f cm\n", distance*100);
+        // else
+            // printf("Distance: %0.04f cm\n", distance*100);
         
-        // printf("Heloł ASE\n");
-        vTaskDelay(pdMS_TO_TICKS(500));
+        vTaskDelay(pdMS_TO_TICKS(200));
     }
 }
 
-void dht11_test(void *pvParameters)
+void measure_environment(void *pvParameters)
 {
     while (true)
     {
-        float humidity, temperature;
         esp_err_t res = dht_read_float_data(DHT_TYPE_DHT11, DHT_PIN, &humidity, &temperature);
         if (res != ESP_OK)
         {
@@ -70,8 +71,8 @@ void dht11_test(void *pvParameters)
                     printf("%s\n", esp_err_to_name(res));
             }
         }
-        else
-            printf("DHT Humidity: %.2f%%, Temperature: %.2f°C\n", humidity, temperature);
+        // else
+        //     printf("DHT Humidity: %.2f%%, Temperature: %.2f°C\n", humidity, temperature);
         
         vTaskDelay(pdMS_TO_TICKS(2000)); // Czekaj 2 sekundy przed kolejnym pomiarem
     }
@@ -79,6 +80,6 @@ void dht11_test(void *pvParameters)
 
 void app_main()
 {
-    xTaskCreate(ultrasonic_test, "ultrasonic_test", configMINIMAL_STACK_SIZE * 3, NULL, 5, NULL);
-    xTaskCreate(dht_test, "dht11_test", configMINIMAL_STACK_SIZE * 3, NULL, 5, NULL);
+    xTaskCreate(measure_distance, "dist_meas", configMINIMAL_STACK_SIZE * 3, NULL, 5, NULL);
+    xTaskCreate(measure_environment, "env_meas", configMINIMAL_STACK_SIZE * 3, NULL, 5, NULL);
 }
