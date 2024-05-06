@@ -2,21 +2,19 @@
 #include <stdbool.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
+#include <pinout.h>
 #include <ultrasonic.h>
 #include <dht11.h>
 #include <esp_err.h>
 
-#define MAX_DISTANCE_CM 500 // 5m max
 
-#define TRIGGER_GPIO 5
-#define ECHO_GPIO 18
-#define DHT_GPIO 4
+#define MAX_DISTANCE_CM 500 // 5m max
 
 void ultrasonic_test(void *pvParameters)
 {
     ultrasonic_sensor_t sensor = {
-        .trigger_pin = TRIGGER_GPIO,
-        .echo_pin = ECHO_GPIO
+        .trigger_pin = TRIGGER_PIN,
+        .echo_pin = ECHO_PIN
     };
 
     ultrasonic_init(&sensor);
@@ -56,7 +54,7 @@ void dht11_test(void *pvParameters)
     while (true)
     {
         float humidity, temperature;
-        esp_err_t res = dht_read_float_data(DHT_TYPE_DHT11, DHT_GPIO, &humidity, &temperature);
+        esp_err_t res = dht_read_float_data(DHT_TYPE_DHT11, DHT_PIN, &humidity, &temperature);
         if (res != ESP_OK)
         {
             printf("DHT error %d: ", res);
