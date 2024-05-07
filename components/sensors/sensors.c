@@ -1,17 +1,19 @@
 #include "sensors.h"
 
+void initalize_sensors()
+{
+    gpio_set_direction(IR_FRONT_L, GPIO_MODE_INPUT);
+    gpio_set_direction(IR_FRONT_R, GPIO_MODE_INPUT);
+    gpio_set_direction(IR_SIDE_L, GPIO_MODE_INPUT);
+    gpio_set_direction(IR_SIDE_R, GPIO_MODE_INPUT);
+}
+
 bool sensors_obstacle_in_front()
 {
-    int prawy_przod = gpio_get_level(IR_FRONT_R);
-    int lewy_przod = gpio_get_level(IR_FRONT_L);
-    
-    return (prawy_przod || lewy_przod);
+    return !(gpio_get_level(IR_FRONT_R) && gpio_get_level(IR_FRONT_L));
 }
 
 bool sensors_obstacle_on_side()
 {
-    int prawy_bok = gpio_get_level(IR_SIDE_R);
-    int lewy_bok = gpio_get_level(IR_SIDE_L);
-    
-    return (prawy_bok || lewy_bok);
+    return !(gpio_get_level(IR_SIDE_R) && gpio_get_level(IR_SIDE_L));
 }

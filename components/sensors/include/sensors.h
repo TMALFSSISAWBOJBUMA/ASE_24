@@ -3,7 +3,9 @@
 
 #include <stdbool.h>
 #include <pinout.h>
+#include <driver/gpio.h>
 
+void initalize_sensors();
 bool sensors_obstacle_in_front();
 bool sensors_obstacle_on_side();
 
