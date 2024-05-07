@@ -95,7 +95,7 @@ void algorithm(void *pvParameters)
 
 void app_main()
 {
-    // xTaskCreate(measure_distance, "dist_meas", configMINIMAL_STACK_SIZE * 3, NULL, 5, NULL);
-    // xTaskCreate(measure_environment, "env_meas", configMINIMAL_STACK_SIZE * 3, NULL, 5, NULL);
+    xTaskCreate(measure_distance, "dist_meas", configMINIMAL_STACK_SIZE * 3, NULL, 5, NULL);
+    xTaskCreate(measure_environment, "env_meas", configMINIMAL_STACK_SIZE * 3, NULL, 5, NULL);
     xTaskCreate(algorithm, "algorithm", configMINIMAL_STACK_SIZE * 3, NULL, 4, NULL);
 }

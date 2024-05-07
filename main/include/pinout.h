@@ -16,7 +16,4 @@
 #define RIGHT_FWD_PIN 25
 #define RIGHT_REV_PIN 26
 
-#define FWD_IR_L 36
-#define FWD_IR_R 39
-
 #endif
