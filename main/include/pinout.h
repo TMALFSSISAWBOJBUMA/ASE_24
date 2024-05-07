@@ -17,9 +17,9 @@
 #define RIGHT_REV_PIN 26
 
 // IR obstacle sensors
-#define IR_FRONT_L 36
-#define IR_FRONT_R 39
-#define IR_SIDE_L 34
-#define IR_SIDE_R 35
+#define IR_FRONT_L 19
+#define IR_FRONT_R 18
+#define IR_SIDE_L 21
+#define IR_SIDE_R 22
 
 #endif
