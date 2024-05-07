@@ -22,6 +22,7 @@
         "task.h": "c",
         "ultrasonic.h": "c",
         "mcpwm.h": "c",
-        "drivetrain.h": "c"
+        "drivetrain.h": "c",
+        "sensors.h": "c"
     }
 }

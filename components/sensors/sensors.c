@@ -1,7 +1,11 @@
-#include <stdio.h>
 #include "sensors.h"
 
-void func(void)
+bool sensors_obstacle_in_front()
 {
+    return false;
+}
 
+bool sensors_obstacle_on_side()
+{
+    return false;
 }
