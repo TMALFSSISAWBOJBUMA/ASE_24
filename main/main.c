@@ -6,19 +6,20 @@
 #include <ultrasonic.h>
 #include <dht11.h>
 #include <esp_err.h>
+#include <drivetrain.h>
 
+motor_struct_t left = {.state = STOP, .duty_fix = {1.0, 1.0}}, right = {.state = STOP, .duty_fix = {1.0, 1.0}};
 
 #define MAX_DISTANCE_CM 500 // 5m max
 
-float front_distance = 1.0;  
+float front_distance = 1.0;
 float humidity, temperature = 23.0;
 
 void measure_distance(void *pvParameters)
 {
     ultrasonic_sensor_t sensor = {
         .trigger_pin = TRIGGER_PIN,
-        .echo_pin = ECHO_PIN
-    };
+        .echo_pin = ECHO_PIN};
 
     ultrasonic_init(&sensor);
 
@@ -31,22 +32,22 @@ void measure_distance(void *pvParameters)
             printf("Error %d: ", res);
             switch (res)
             {
-                case ESP_ERR_ULTRASONIC_PING:
-                    printf("Cannot ping (device is in invalid state)\n");
-                    break;
-                case ESP_ERR_ULTRASONIC_PING_TIMEOUT:
-                    printf("Ping timeout (no device found)\n");
-                    break;
-                case ESP_ERR_ULTRASONIC_ECHO_TIMEOUT:
-                    printf("Echo timeout (i.e. distance too big)\n");
-                    break;
-                default:
-                    printf("%s\n", esp_err_to_name(res));
+            case ESP_ERR_ULTRASONIC_PING:
+                printf("Cannot ping (device is in invalid state)\n");
+                break;
+            case ESP_ERR_ULTRASONIC_PING_TIMEOUT:
+                printf("Ping timeout (no device found)\n");
+                break;
+            case ESP_ERR_ULTRASONIC_ECHO_TIMEOUT:
+                printf("Echo timeout (i.e. distance too big)\n");
+                break;
+            default:
+                printf("%s\n", esp_err_to_name(res));
             }
         }
         // else
-            // printf("Distance: %0.04f cm\n", distance*100);
-        
+        // printf("Distance: %0.04f cm\n", distance*100);
+
         vTaskDelay(pdMS_TO_TICKS(200));
     }
 }
@@ -61,20 +62,44 @@ void measure_environment(void *pvParameters)
             printf("DHT error %d: ", res);
             switch (res)
             {
-                case ESP_ERR_TIMEOUT:
-                    printf("Timeout occurred\n");
-                    break;
-                case ESP_ERR_INVALID_CRC:
-                    printf("Checksum failed, invalid data received from sensor\n");
-                    break;
-                default:
-                    printf("%s\n", esp_err_to_name(res));
+            case ESP_ERR_TIMEOUT:
+                printf("Timeout occurred\n");
+                break;
+            case ESP_ERR_INVALID_CRC:
+                printf("Checksum failed, invalid data received from sensor\n");
+                break;
+            default:
+                printf("%s\n", esp_err_to_name(res));
             }
         }
         // else
         //     printf("DHT Humidity: %.2f%%, Temperature: %.2f°C\n", humidity, temperature);
-        
+
         vTaskDelay(pdMS_TO_TICKS(2000)); // Czekaj 2 sekundy przed kolejnym pomiarem
+    }
+}
+
+static void set_motors(float duty, bool forward){
+    if(forward){
+        motor_forward(&left, duty);
+        motor_forward(&right, duty);
+    } else {
+        motor_backward(&left, duty);
+        motor_backward(&right, duty);
+    }
+}
+
+void algorithm(void *pvParameters)
+{
+    initialize_motors(&left, &right);
+    while (1)
+    {
+        set_motors(20, true);
+        vTaskDelay(pdMS_TO_TICKS(2000));
+        set_motors(0, true);
+        vTaskDelay(pdMS_TO_TICKS(100));
+        set_motors(20, false);
+        vTaskDelay(pdMS_TO_TICKS(2000));
     }
 }
 
@@ -82,4 +107,5 @@ void app_main()
 {
     xTaskCreate(measure_distance, "dist_meas", configMINIMAL_STACK_SIZE * 3, NULL, 5, NULL);
     xTaskCreate(measure_environment, "env_meas", configMINIMAL_STACK_SIZE * 3, NULL, 5, NULL);
+    xTaskCreate(algorithm, "algorithm", configMINIMAL_STACK_SIZE * 3, NULL, 4, NULL);
 }

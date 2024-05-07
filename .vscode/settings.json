@@ -20,6 +20,8 @@
     "files.associations": {
         "esp_err.h": "c",
         "task.h": "c",
-        "ultrasonic.h": "c"
+        "ultrasonic.h": "c",
+        "mcpwm.h": "c",
+        "drivetrain.h": "c"
     }
 }

@@ -7,9 +7,9 @@
 
 #define MAX_PWM 100
 
-enum
+typedef enum
 {
-    FWD=0,
+    FWD = 0,
     REV,
     STOP
 } motor_state_e;
@@ -21,5 +21,10 @@ typedef struct
     float duty;
     float duty_fix[2];
 } motor_struct_t;
+
+void initialize_motors(motor_struct_t *left, motor_struct_t *right);
+void motor_forward(motor_struct_t *motor, float duty_cycle);
+void motor_backward(motor_struct_t *motor, float duty_cycle);
+void motor_stop(motor_struct_t *motor);
 
 #endif
