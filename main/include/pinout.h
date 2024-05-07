@@ -16,4 +16,10 @@
 #define RIGHT_FWD_PIN 25
 #define RIGHT_REV_PIN 26
 
+// IR obstacle sensors
+#define IR_FRONT_L 36
+#define IR_FRONT_R 39
+#define IR_SIDE_L 34
+#define IR_SIDE_R 35
+
 #endif
