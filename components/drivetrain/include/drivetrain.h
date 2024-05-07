@@ -22,6 +22,8 @@ typedef struct
     float duty_fix[2];
 } motor_struct_t;
 
+extern motor_struct_t left, right;
+
 void initialize_motors();
 void set_motors(float duty, bool forward);
 void motor_forward(motor_struct_t *motor, float duty_cycle);

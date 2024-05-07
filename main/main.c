@@ -7,6 +7,7 @@
 #include <dht11.h>
 #include <esp_err.h>
 #include <drivetrain.h>
+#include <sensors.h>
 
 #define MAX_DISTANCE_CM 500 // 5m max
 
@@ -77,25 +78,62 @@ void measure_environment(void *pvParameters)
     }
 }
 
+typedef enum
+{
+    FORWARD,
+    REVERSING,
+    TWISTING,
+    WAITING
+} algorithm_state_e;
+
+#define MAX_SPEED 50.0
 void algorithm(void *pvParameters)
 {
+    algorithm_state_e state = WAITING;
     initialize_motors();
+    initalize_sensors();
+    bool obstacle_in_front = sensors_obstacle_in_front();
     while (1)
     {
-        printf("\nfwd");
-        set_motors(100, true);
-        vTaskDelay(pdMS_TO_TICKS(2000));
-        set_motors(0, true);
-        vTaskDelay(pdMS_TO_TICKS(100));
-        printf("\nrev");
-        set_motors(100, false);
-        vTaskDelay(pdMS_TO_TICKS(2000));
+        vTaskDelay(10);
+        obstacle_in_front = sensors_obstacle_in_front();
+        printf("%d -> %d\n", state, obstacle_in_front);
+        switch (state)
+        {
+        case FORWARD:
+            if (obstacle_in_front)
+            {
+                set_motors(0, false);
+                vTaskDelay(100);
+                state = REVERSING;
+            }
+            break;
+        case REVERSING:
+            set_motors(MAX_SPEED, false);
+            vTaskDelay(1000);
+            set_motors(0, false);
+            state = TWISTING;
+            break;
+        case TWISTING:
+            motor_forward(&left, MAX_SPEED);
+            motor_backward(&right, MAX_SPEED);
+            vTaskDelay(500);
+            set_motors(0, false);
+            state = WAITING;
+            break;
+        case WAITING:
+            state = FORWARD;
+            set_motors(MAX_SPEED, true);
+            break;
+        default:
+            state = WAITING;
+        }
     }
 }
 
 void app_main()
 {
-    xTaskCreate(measure_distance, "dist_meas", configMINIMAL_STACK_SIZE * 3, NULL, 5, NULL);
-    xTaskCreate(measure_environment, "env_meas", configMINIMAL_STACK_SIZE * 3, NULL, 5, NULL);
-    xTaskCreate(algorithm, "algorithm", configMINIMAL_STACK_SIZE * 3, NULL, 4, NULL);
+    // xTaskCreate(measure_distance, "dist_meas", configMINIMAL_STACK_SIZE * 3, NULL, 5, NULL);
+    // xTaskCreate(measure_environment, "env_meas", configMINIMAL_STACK_SIZE * 3, NULL, 5, NULL);
+    xTaskCreate(algorithm, "algorithm", configMINIMAL_STACK_SIZE * 4, NULL, 5, NULL);
 }
