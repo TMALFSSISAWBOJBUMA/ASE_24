@@ -1,17 +1,22 @@
 #ifndef __PINOUT_H__
 #define __PINOUT_H__
 
+// https://www.upesy.com/blogs/tutorials/esp32-pinout-reference-gpio-pins-ultimate-guide#
+
 // front ultrasonic
-#define TRIGGER_PIN 5
-#define ECHO_PIN 6
+#define TRIGGER_PIN 22
+#define ECHO_PIN 23
 
 // dht11 sensor
-#define DHT_PIN 4
+#define DHT_PIN 21
 
 // motors
-#define LEFT_FWD_PIN 15
-#define LEFT_REV_PIN 16
-#define RIGHT_FWD_PIN 17
-#define RIGHT_REV_PIN 18
+#define LEFT_FWD_PIN 32
+#define LEFT_REV_PIN 33
+#define RIGHT_FWD_PIN 25
+#define RIGHT_REV_PIN 26
+
+#define FWD_IR_L 36
+#define FWD_IR_R 39
 
 #endif
