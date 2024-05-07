@@ -95,7 +95,7 @@ void algorithm(void *pvParameters)
     bool obstacle_in_front = sensors_obstacle_in_front();
     while (1)
     {
-        vTaskDelay(10);
+        vTaskDelay(pdMS_TO_TICKS(10));
         obstacle_in_front = sensors_obstacle_in_front();
         printf("%d -> %d\n", state, obstacle_in_front);
         switch (state)
@@ -104,20 +104,20 @@ void algorithm(void *pvParameters)
             if (obstacle_in_front)
             {
                 set_motors(0, false);
-                vTaskDelay(100);
+                vTaskDelay(pdMS_TO_TICKS(100));
                 state = REVERSING;
             }
             break;
         case REVERSING:
             set_motors(MAX_SPEED, false);
-            vTaskDelay(1000);
+            vTaskDelay(pdMS_TO_TICKS(1200));
             set_motors(0, false);
             state = TWISTING;
             break;
         case TWISTING:
             motor_forward(&left, MAX_SPEED);
             motor_backward(&right, MAX_SPEED);
-            vTaskDelay(500);
+                vTaskDelay(pdMS_TO_TICKS(500));
             set_motors(0, false);
             state = WAITING;
             break;
@@ -133,7 +133,7 @@ void algorithm(void *pvParameters)
 
 void app_main()
 {
-    // xTaskCreate(measure_distance, "dist_meas", configMINIMAL_STACK_SIZE * 3, NULL, 5, NULL);
-    // xTaskCreate(measure_environment, "env_meas", configMINIMAL_STACK_SIZE * 3, NULL, 5, NULL);
-    xTaskCreate(algorithm, "algorithm", configMINIMAL_STACK_SIZE * 4, NULL, 5, NULL);
+    xTaskCreate(measure_distance, "dist_meas", configMINIMAL_STACK_SIZE, NULL, 5, NULL);
+    // xTaskCreate(measure_environment, "env_meas", configMINIMAL_STACK_SIZE, NULL, 5, NULL);
+    xTaskCreate(algorithm, "algorithm", configMINIMAL_STACK_SIZE, NULL, 5, NULL);
 }

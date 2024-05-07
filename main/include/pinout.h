@@ -4,8 +4,8 @@
 // https://www.upesy.com/blogs/tutorials/esp32-pinout-reference-gpio-pins-ultimate-guide#
 
 // front ultrasonic
-#define TRIGGER_PIN 22
-#define ECHO_PIN 23
+#define TRIGGER_PIN 13
+#define ECHO_PIN 12
 
 // dht11 sensor
 #define DHT_PIN 21
