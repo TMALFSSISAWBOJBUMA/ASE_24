@@ -8,8 +8,6 @@
 #include <esp_err.h>
 #include <drivetrain.h>
 
-motor_struct_t left = {.state = STOP, .duty_fix = {1.0, 1.0}}, right = {.state = STOP, .duty_fix = {1.0, 1.0}};
-
 #define MAX_DISTANCE_CM 500 // 5m max
 
 float front_distance = 1.0;
@@ -79,33 +77,25 @@ void measure_environment(void *pvParameters)
     }
 }
 
-static void set_motors(float duty, bool forward){
-    if(forward){
-        motor_forward(&left, duty);
-        motor_forward(&right, duty);
-    } else {
-        motor_backward(&left, duty);
-        motor_backward(&right, duty);
-    }
-}
-
 void algorithm(void *pvParameters)
 {
-    initialize_motors(&left, &right);
+    initialize_motors();
     while (1)
     {
-        set_motors(20, true);
+        printf("\nfwd");
+        set_motors(100, true);
         vTaskDelay(pdMS_TO_TICKS(2000));
         set_motors(0, true);
         vTaskDelay(pdMS_TO_TICKS(100));
-        set_motors(20, false);
+        printf("\nrev");
+        set_motors(100, false);
         vTaskDelay(pdMS_TO_TICKS(2000));
     }
 }
 
 void app_main()
 {
-    xTaskCreate(measure_distance, "dist_meas", configMINIMAL_STACK_SIZE * 3, NULL, 5, NULL);
-    xTaskCreate(measure_environment, "env_meas", configMINIMAL_STACK_SIZE * 3, NULL, 5, NULL);
+    // xTaskCreate(measure_distance, "dist_meas", configMINIMAL_STACK_SIZE * 3, NULL, 5, NULL);
+    // xTaskCreate(measure_environment, "env_meas", configMINIMAL_STACK_SIZE * 3, NULL, 5, NULL);
     xTaskCreate(algorithm, "algorithm", configMINIMAL_STACK_SIZE * 3, NULL, 4, NULL);
 }
