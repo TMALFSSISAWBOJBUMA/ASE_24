@@ -14,13 +14,13 @@ void initialize_motors()
     pwm_config.counter_mode = MCPWM_UP_COUNTER;
     pwm_config.duty_mode = MCPWM_DUTY_MODE_0;
 
-    mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM0A, LEFT_FWD_PIN);
-    mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM0B, LEFT_REV_PIN);
+    mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM0B, LEFT_FWD_PIN);
+    mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM0A, LEFT_REV_PIN);
     mcpwm_init(MCPWM_UNIT_0, MCPWM_TIMER_0, &pwm_config);
     left.timer = MCPWM_TIMER_0;
 
-    mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM1A, RIGHT_FWD_PIN);
-    mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM1B, RIGHT_REV_PIN);
+    mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM1B, RIGHT_FWD_PIN);
+    mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM1A, RIGHT_REV_PIN);
     mcpwm_init(MCPWM_UNIT_0, MCPWM_TIMER_1, &pwm_config);
     right.timer = MCPWM_TIMER_1;
 }
