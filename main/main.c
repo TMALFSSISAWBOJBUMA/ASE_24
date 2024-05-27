@@ -95,45 +95,5 @@ void algorithm(void *pvParameters)
     bool obstacle_in_front = sensors_obstacle_in_front();
     while (1)
     {
-        vTaskDelay(pdMS_TO_TICKS(10));
-        obstacle_in_front = sensors_obstacle_in_front();
-        printf("%d -> %d\n", state, obstacle_in_front);
-        switch (state)
-        {
-        case FORWARD:
-            if (obstacle_in_front)
-            {
-                set_motors(0, false);
-                vTaskDelay(pdMS_TO_TICKS(100));
-                state = REVERSING;
-            }
-            break;
-        case REVERSING:
-            set_motors(MAX_SPEED, false);
-            vTaskDelay(pdMS_TO_TICKS(1200));
-            set_motors(0, false);
-            state = TWISTING;
-            break;
-        case TWISTING:
-            motor_forward(&left, MAX_SPEED);
-            motor_backward(&right, MAX_SPEED);
-                vTaskDelay(pdMS_TO_TICKS(500));
-            set_motors(0, false);
-            state = WAITING;
-            break;
-        case WAITING:
-            state = FORWARD;
-            set_motors(MAX_SPEED, true);
-            break;
-        default:
-            state = WAITING;
-        }
-    }
-}
-
-void app_main()
-{
-    xTaskCreate(measure_distance, "dist_meas", configMINIMAL_STACK_SIZE, NULL, 5, NULL);
-    // xTaskCreate(measure_environment, "env_meas", configMINIMAL_STACK_SIZE, NULL, 5, NULL);
-    xTaskCreate(algorithm, "algorithm", configMINIMAL_STACK_SIZE, NULL, 5, NULL);
+        obstacle_in_front = sensors_obstacle_in_front() || sensors_tape_detected();
 }

@@ -5,7 +5,7 @@
 
 // front ultrasonic
 #define TRIGGER_PIN 13
-#define ECHO_PIN 12
+#define ECHO_PIN 14
 
 // dht11 sensor
 #define DHT_PIN 21
@@ -21,5 +21,9 @@
 #define IR_FRONT_R 18
 #define IR_SIDE_L 21
 #define IR_SIDE_R 22
+
+// tape sensors
+#define IR_TAPE_L 23
+#define IR_TAPE_R 27
 
 #endif
