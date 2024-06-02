@@ -36,141 +36,93 @@
  *
  * BSD Licensed as described in the file LICENSE
  */
-#include <esp_idf_lib_helpers.h>
 #include "ultrasonic.h"
-#include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
-#include <esp_timer.h>
-#include <ets_sys.h>
 
-#define TRIGGER_LOW_DELAY 4
-#define TRIGGER_HIGH_DELAY 10
-#define PING_TIMEOUT 6000
-#define ROUNDTRIP_M 5800.0f
-#define ROUNDTRIP_CM 58
-#define SPEED_OF_SOUND_AT_0C_M_S 331.4 // Speed of sound in m/s at 0 degrees Celsius
+static ultrasonic_sensor_t sensor={GPIO_NUM_MAX,GPIO_NUM_MAX};
 
-#if HELPER_TARGET_IS_ESP32
-static portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
-#define PORT_ENTER_CRITICAL portENTER_CRITICAL(&mux)
-#define PORT_EXIT_CRITICAL portEXIT_CRITICAL(&mux)
-
-#elif HELPER_TARGET_IS_ESP8266
-#define PORT_ENTER_CRITICAL portENTER_CRITICAL()
-#define PORT_EXIT_CRITICAL portEXIT_CRITICAL()
-
-#else
-#error cannot identify the target
-#endif
-
-#define timeout_expired(start, len) ((esp_timer_get_time() - (start)) >= (len))
-
-#define CHECK_ARG(VAL) do { if (!(VAL)) return ESP_ERR_INVALID_ARG; } while (0)
-#define CHECK(x) do { esp_err_t __; if ((__ = x) != ESP_OK) return __; } while (0)
-#define RETURN_CRITICAL(RES) do { PORT_EXIT_CRITICAL; return RES; } while(0)
-
-esp_err_t ultrasonic_init(const ultrasonic_sensor_t *dev)
-{
-    CHECK_ARG(dev);
-
-    CHECK(gpio_set_direction(dev->trigger_pin, GPIO_MODE_OUTPUT));
-    CHECK(gpio_set_direction(dev->echo_pin, GPIO_MODE_INPUT));
-
-    return gpio_set_level(dev->trigger_pin, 0);
+void ultrasonic_config(gpio_num_t trigger_pin, gpio_num_t echo_pin){
+    sensor.trigger_pin = trigger_pin;
+    sensor.echo_pin = echo_pin;
 }
 
 
-esp_err_t ultrasonic_measure_raw(const ultrasonic_sensor_t *dev, uint32_t max_time_us, uint32_t *time_us)
+static bool hc_sr04_echo_callback(mcpwm_cap_channel_handle_t cap_chan, const mcpwm_capture_event_data_t *edata, void *user_data)
 {
-    CHECK_ARG(dev && time_us);
+    static uint32_t cap_val_begin_of_sample = 0;
+    static uint32_t cap_val_end_of_sample = 0;
+    TaskHandle_t task_to_notify = (TaskHandle_t)user_data;
+    BaseType_t high_task_wakeup = pdFALSE;
 
-    PORT_ENTER_CRITICAL;
+    //calculate the interval in the ISR,
+    //so that the interval will be always correct even when capture_queue is not handled in time and overflow.
+    if (edata->cap_edge == MCPWM_CAP_EDGE_POS) {
+        // store the timestamp when pos edge is detected
+        cap_val_begin_of_sample = edata->cap_value;
+        cap_val_end_of_sample = cap_val_begin_of_sample;
+    } else {
+        cap_val_end_of_sample = edata->cap_value;
+        uint32_t tof_ticks = cap_val_end_of_sample - cap_val_begin_of_sample;
 
-    // Ping: Low for 2..4 us, then high 10 us
-    CHECK(gpio_set_level(dev->trigger_pin, 0));
-    ets_delay_us(TRIGGER_LOW_DELAY);
-    CHECK(gpio_set_level(dev->trigger_pin, 1));
-    ets_delay_us(TRIGGER_HIGH_DELAY);
-    CHECK(gpio_set_level(dev->trigger_pin, 0));
-
-    // Previous ping isn't ended
-    if (gpio_get_level(dev->echo_pin))
-        RETURN_CRITICAL(ESP_ERR_ULTRASONIC_PING);
-
-    // Wait for echo
-    int64_t start = esp_timer_get_time();
-    while (!gpio_get_level(dev->echo_pin))
-    {
-        if (timeout_expired(start, PING_TIMEOUT))
-            RETURN_CRITICAL(ESP_ERR_ULTRASONIC_PING_TIMEOUT);
+        // notify the task to calculate the distance
+        xTaskNotifyFromISR(task_to_notify, tof_ticks, eSetValueWithOverwrite, &high_task_wakeup);
     }
 
-    // got echo, measuring
-    int64_t echo_start = esp_timer_get_time();
-    int64_t time = echo_start;
-    while (gpio_get_level(dev->echo_pin))
-    {
-        time = esp_timer_get_time();
-        if (timeout_expired(echo_start, max_time_us))
-            RETURN_CRITICAL(ESP_ERR_ULTRASONIC_ECHO_TIMEOUT);
+    return high_task_wakeup == pdTRUE;
+}
+
+
+static void gen_trig_output(void)
+{
+    gpio_set_level(sensor.trigger_pin, 1); // set high
+    esp_rom_delay_us(10);
+    gpio_set_level(sensor.trigger_pin, 0); // set low
+}
+
+void measure_distance(void *pvParameters)
+{
+    mcpwm_cap_timer_handle_t cap_timer = NULL;
+    mcpwm_capture_timer_config_t cap_conf = {
+        .clk_src = MCPWM_CAPTURE_CLK_SRC_DEFAULT,
+        .group_id = 2,
+    };
+    ESP_ERROR_CHECK(mcpwm_new_capture_timer(&cap_conf, &cap_timer));
+
+    mcpwm_cap_channel_handle_t cap_chan = NULL;
+        mcpwm_capture_channel_config_t cap_ch_conf = {
+            .gpio_num = sensor.echo_pin,
+            .prescale = 1,
+            // capture on both edge
+            .flags.neg_edge = true,
+            .flags.pos_edge = true,
+            // pull up internally
+            .flags.pull_up = true,
+        };
+        ESP_ERROR_CHECK(mcpwm_new_capture_channel(cap_timer, &cap_ch_conf, &cap_chan));
+
+    TaskHandle_t cur_task = xTaskGetCurrentTaskHandle();
+    mcpwm_capture_event_callbacks_t cbs = {
+        .on_cap = hc_sr04_echo_callback,
+    };
+    ESP_ERROR_CHECK(mcpwm_capture_channel_register_event_callbacks(cap_chan, &cbs, cur_task));
+    ESP_ERROR_CHECK(mcpwm_capture_channel_enable(cap_chan));
+
+    ESP_ERROR_CHECK(mcpwm_capture_timer_enable(cap_timer));
+    ESP_ERROR_CHECK(mcpwm_capture_timer_start(cap_timer));
+    uint32_t tof_ticks;
+    while (1) {
+        // trigger the sensor to start a new sample
+        gen_trig_output();
+        // wait for echo done signal
+        if (xTaskNotifyWait(0x00, ULONG_MAX, &tof_ticks, pdMS_TO_TICKS(1000)) == pdTRUE) {
+            float pulse_width_us = tof_ticks * (1000000.0 / esp_clk_apb_freq());
+            if (pulse_width_us > 35000) {
+                // out of range
+                continue;
+            }
+            // convert the pulse width into measure distance
+            float distance = (float) pulse_width_us / 58;
+            ESP_LOGI("sonic", "Measured distance: %.2fcm", distance);
+        }
+        vTaskDelay(pdMS_TO_TICKS(500));
     }
-    PORT_EXIT_CRITICAL;
-
-    *time_us = time - echo_start;
-
-    return ESP_OK;
-}
-
-esp_err_t ultrasonic_measure(const ultrasonic_sensor_t *dev, float max_distance, float *distance)
-{
-    CHECK_ARG(dev && distance);
-
-    uint32_t time_us;
-    CHECK(ultrasonic_measure_raw(dev, max_distance * ROUNDTRIP_M, &time_us));
-    *distance = time_us / ROUNDTRIP_M;
-
-    return ESP_OK;
-}
-
-esp_err_t ultrasonic_measure_cm(const ultrasonic_sensor_t *dev, uint32_t max_distance, uint32_t *distance)
-{
-    CHECK_ARG(dev && distance);
-
-    uint32_t time_us;
-    CHECK(ultrasonic_measure_raw(dev, max_distance * ROUNDTRIP_CM, &time_us));
-    *distance = time_us / ROUNDTRIP_CM;
-
-    return ESP_OK;
-}
-
-esp_err_t ultrasonic_measure_temp_compensated(const ultrasonic_sensor_t *dev, float max_distance, float *distance, float temperature_c)
-{
-    CHECK_ARG(dev && distance);
-
-    // Calculate the speed of sound in m/us based on temperature
-    float speed_of_sound = (SPEED_OF_SOUND_AT_0C_M_S + 0.6 * temperature_c) / 1000000; // Convert m/s to m/us
-
-    uint32_t time_us;
-    // Adjust max_time_us based on the recalculated speed of sound
-    CHECK(ultrasonic_measure_raw(dev, max_distance / speed_of_sound, &time_us));
-    // Calculate distance using the temperature-compensated speed of sound
-    *distance = time_us * speed_of_sound;
-
-    return ESP_OK;
-}
-
-esp_err_t ultrasonic_measure_cm_temp_compensated(const ultrasonic_sensor_t *dev, uint32_t max_distance, uint32_t *distance, float temperature_c)
-{
-    CHECK_ARG(dev && distance);
-
-    // Calculate the speed of sound in cm/us based on temperature
-    float speed_of_sound_cm_us = ((SPEED_OF_SOUND_AT_0C_M_S + 0.6 * temperature_c) * 100) / 1000000; // Convert m/s to cm/us
-
-    uint32_t time_us;
-    // Adjust max_time_us based on the recalculated speed of sound in cm
-    CHECK(ultrasonic_measure_raw(dev, max_distance * 100 / speed_of_sound_cm_us, &time_us));
-    // Calculate distance using the temperature-compensated speed of sound, converting result to cm
-    *distance = time_us * speed_of_sound_cm_us;
-
-    return ESP_OK;
 }

@@ -1,0 +1,15 @@
+dependencies:
+  espressif/bdc_motor:
+    component_hash: 9292b605cfd390ff62225caa93e02700b86377e6a3156620192e4876dcf87b27
+    source:
+      service_url: https://api.components.espressif.com/
+      type: service
+    version: 0.1.0
+  idf:
+    component_hash: null
+    source:
+      type: idf
+    version: 5.2.1
+manifest_hash: 24a01d7bdf0fd2ebc78530d5b31916a6b2c60e8e9e0572b1f00aa85ac5416501
+target: esp32
+version: 1.0.0
