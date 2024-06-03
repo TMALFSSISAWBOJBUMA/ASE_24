@@ -83,7 +83,7 @@ void measure_distance(void *pvParameters)
     mcpwm_cap_timer_handle_t cap_timer = NULL;
     mcpwm_capture_timer_config_t cap_conf = {
         .clk_src = MCPWM_CAPTURE_CLK_SRC_DEFAULT,
-        .group_id = 2,
+        .group_id = 1,
     };
     ESP_ERROR_CHECK(mcpwm_new_capture_timer(&cap_conf, &cap_timer));
 

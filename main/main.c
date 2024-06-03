@@ -41,7 +41,7 @@ void measure_environment(void *pvParameters)
 }
 
 bdc_motor_handle_t left, right;
-const uint32_t PMW_FREQUENCY = 50, RESOLUTION_HZ = 10000000;
+const uint32_t PMW_FREQUENCY = 1000, RESOLUTION_HZ = 1000000;
 
 void motors_direction(bool forward)
 {
@@ -59,7 +59,7 @@ void motors_direction(bool forward)
 
 void motors_speed(float speed)
 {
-    uint32_t speed_32 = speed * RESOLUTION_HZ / PMW_FREQUENCY;
+    uint32_t speed_32 = speed / 100.0 * (RESOLUTION_HZ / PMW_FREQUENCY-1);
     bdc_motor_set_speed(left, speed_32);
     bdc_motor_set_speed(right, speed_32);
 }
@@ -81,7 +81,6 @@ void initialize_motors()
 
     motor_config.pwma_gpio_num = RIGHT_FWD_PIN;
     motor_config.pwmb_gpio_num = RIGHT_REV_PIN;
-    mcpwm_config.group_id = 1;
     ESP_ERROR_CHECK(bdc_motor_new_mcpwm_device(&motor_config, &mcpwm_config, &right));
 
     bdc_motor_enable(left);
@@ -99,6 +98,7 @@ typedef enum
 #define MAX_SPEED 50.0
 void app_main()
 {
+    ultrasonic_config(TRIGGER_PIN, ECHO_PIN);
     xTaskCreate(measure_distance, "dist_meas", configMINIMAL_STACK_SIZE * 2, NULL, 5, NULL);
     algorithm_state_e state = WAITING;
     initialize_motors();
