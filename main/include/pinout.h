@@ -26,4 +26,8 @@
 #define IR_TAPE_L 23
 #define IR_TAPE_R 27
 
+// speed feedback photocouplers
+#define SPEED_L 34
+#define SPEED_R 35
+
 #endif
