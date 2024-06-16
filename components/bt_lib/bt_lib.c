@@ -39,16 +39,28 @@ static void bt_app_spp_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t *param) {
             esp_log_buffer_hex("", param->data_ind.data, param->data_ind.len);
 
             // Obsługa otrzymanych danych
-            if (param->data_ind.len > 0) {
-                // Przykład: Odczyt i logowanie odebranych danych
-                char* received_data = (char*)param->data_ind.data;
-                ESP_LOGI(TAG, "Received data: %s", received_data);
+            if (param->data_ind.len == 1) {
+                char received_char = param->data_ind.data[0];
+                if (received_char == '1') {
+                    ESP_LOGI(TAG, "Received '1': Moving forward");
+                    // Tutaj wywołujesz funkcje związane z uruchomieniem czegoś, np. rozpoczęcie ruchu robota
+                    // np. start_robot_movement();
+                } else if (received_char == '2') {
+                    ESP_LOGI(TAG, "Received '2': Stopping");
+                    // Tutaj wywołujesz funkcje związane ze zatrzymaniem czegoś, np. zatrzymanie ruchu robota
+                    // np. stop_robot_movement();
+                } else {
+                    ESP_LOGI(TAG, "Received unexpected data: %c", received_char);
+                }
+            } else {
+                ESP_LOGW(TAG, "Received unexpected data length: %d", param->data_ind.len);
             }
             break;
         default:
             break;
     }
 }
+
 
 
 void bt_init() {
