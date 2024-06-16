@@ -26,7 +26,6 @@ static void bt_app_gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t *pa
 }
 
 static void bt_app_spp_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t *param) {
-    // Obsługa zdarzeń Bluetooth SPP
     switch (event) {
         case ESP_SPP_INIT_EVT:
             ESP_LOGI(TAG, "ESP_SPP_INIT_EVT");
@@ -39,24 +38,18 @@ static void bt_app_spp_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t *param) {
             ESP_LOGI(TAG, "ESP_SPP_DATA_IND_EVT len=%d handle=%d", param->data_ind.len, param->data_ind.handle);
             esp_log_buffer_hex("", param->data_ind.data, param->data_ind.len);
 
-            spp_handle = param->data_ind.handle;
-
             // Obsługa otrzymanych danych
-            if (param->data_ind.len == 1) {
-                char received_char = param->data_ind.data[0];
-                if (received_char == '1') {
-                    ESP_LOGI(TAG, "Received '1': Moving forward");
-                    // Tutaj możesz wywołać odpowiednie funkcje z algorytmem
-                } else if (received_char == '2') {
-                    ESP_LOGI(TAG, "Received '2': Stopping");
-                    // Tutaj możesz wywołać odpowiednie funkcje z algorytmem
-                }
+            if (param->data_ind.len > 0) {
+                // Przykład: Odczyt i logowanie odebranych danych
+                char* received_data = (char*)param->data_ind.data;
+                ESP_LOGI(TAG, "Received data: %s", received_data);
             }
             break;
         default:
             break;
     }
 }
+
 
 void bt_init() {
     // Kod inicjalizacji Bluetootha
