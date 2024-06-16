@@ -8,6 +8,7 @@
 #include <esp_err.h>
 #include <drivetrain.h>
 #include <driver/gpio.h>
+#include <bt_lib.h>
 
 motor_struct_t left = {.state = STOP, .duty_fix = {1.0, 1.0}}, right = {.state = STOP, .duty_fix = {1.0, 1.0}};
 
@@ -96,10 +97,34 @@ void algorithm(void *pvParameters)
 
 void app_main()
 {
+    // Inicjalizacja Bluetootha z biblioteki
+    bt_init();
+
+    // Tworzenie zadań do pomiaru odległości, środowiska i algorytmu
     xTaskCreate(measure_distance, "dist_meas", configMINIMAL_STACK_SIZE * 3, NULL, 5, NULL);
     xTaskCreate(measure_environment, "env_meas", configMINIMAL_STACK_SIZE * 3, NULL, 5, NULL);
     xTaskCreate(algorithm, "algorithm", configMINIMAL_STACK_SIZE * 3, NULL, 4, NULL);
+
+    while (1) {
+        // Odczytaj stany odbiciowe
+        int prawy_przod = gpio_get_level(odb_prawy_przod);
+        int lewy_przod = gpio_get_level(odb_lewy_przod);
+        int prawy_bok = gpio_get_level(odb_prawy_bok);
+        int lewy_bok = gpio_get_level(odb_lewy_bok);
+
+        // Przygotuj dane do wysłania przez Bluetooth
+        char data[64];
+        snprintf(data, sizeof(data), "Sensors: %d,%d,%d,%d\n",
+                 prawy_przod, lewy_przod, prawy_bok, lewy_bok);
+
+        // Wyślij dane przez Bluetooth
+        bt_send_data(data, strlen(data));
+
+        // Opóźnienie na 2 sekundy (2000 ms)
+        vTaskDelay(pdMS_TO_TICKS(2000));
+    }
 }
+
 
 
 
