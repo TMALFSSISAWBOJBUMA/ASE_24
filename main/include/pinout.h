@@ -18,8 +18,8 @@
 // motors
 #define LEFT_FWD_PIN 32
 #define LEFT_REV_PIN 33
-#define RIGHT_FWD_PIN 25
-#define RIGHT_REV_PIN 26
+#define RIGHT_FWD_PIN 26
+#define RIGHT_REV_PIN 25
 
 // IR obstacle sensors
 #define IR_FRONT 19
