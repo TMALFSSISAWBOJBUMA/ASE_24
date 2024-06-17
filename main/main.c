@@ -3,44 +3,12 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include "pinout.h"
-#include "ultrasonic.h"
-#include "dht11.h"
 #include <esp_err.h>
 #include <esp_check.h>
 #include "bdc_motor.h"
 #include "driver/pulse_cnt.h"
 #include "sensors.h"
 #include "esp_log.h"
-
-float front_distance = 1.0;
-float humidity, temperature = 23.0;
-
-void measure_environment(void *pvParameters)
-{
-    while (true)
-    {
-        esp_err_t res = dht_read_float_data(DHT_TYPE_DHT11, DHT_PIN, &humidity, &temperature);
-        if (res != ESP_OK)
-        {
-            printf("DHT error %d: ", res);
-            switch (res)
-            {
-            case ESP_ERR_TIMEOUT:
-                printf("Timeout occurred\n");
-                break;
-            case ESP_ERR_INVALID_CRC:
-                printf("Checksum failed, invalid data received from sensor\n");
-                break;
-            default:
-                printf("%s\n", esp_err_to_name(res));
-            }
-        }
-        // else
-        //     printf("DHT Humidity: %.2f%%, Temperature: %.2f°C\n", humidity, temperature);
-
-        vTaskDelay(pdMS_TO_TICKS(2000)); // Czekaj 2 sekundy przed kolejnym pomiarem
-    }
-}
 
 typedef struct
 {
@@ -128,17 +96,16 @@ typedef enum
 #define MAX_SPEED 50.0
 void app_main()
 {
-    ultrasonic_config(TRIGGER_PIN, ECHO_PIN);
-    xTaskCreate(measure_distance, "dist_meas", configMINIMAL_STACK_SIZE * 2, NULL, 5, NULL);
+    // ultrasonic_config(TRIGGER_PIN, ECHO_PIN);
+    // xTaskCreate(measure_distance, "dist_meas", configMINIMAL_STACK_SIZE * 2, NULL, 5, NULL);
     algorithm_state_e state = WAITING;
     initialize_motors();
     initalize_sensors();
-    // xTaskCreate(measure_environment, "env_meas", configMINIMAL_STACK_SIZE, NULL, 5, NULL);
-    bool obstacle_in_front = sensors_obstacle_in_front();
+    bool obstacle_in_front = sensors_obstacle_front();
     while (1)
     {
         vTaskDelay(pdMS_TO_TICKS(20));
-        obstacle_in_front = sensors_obstacle_in_front() || sensors_tape_detected();
+        obstacle_in_front = sensors_obstacle_front() || sensors_tape_detected();
         ESP_LOGI("main", "%d -> %d\n", state, obstacle_in_front);
         switch (state)
         {

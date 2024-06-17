@@ -6,8 +6,10 @@
 #include <driver/gpio.h>
 
 void initalize_sensors();
-bool sensors_obstacle_in_front();
-bool sensors_obstacle_on_side();
+bool sensors_obstacle_front();
+bool sensors_obstacle_back();
+bool sensors_obstacle_right();
+bool sensors_obstacle_left();
 bool sensors_tape_detected();
 
 #endif
