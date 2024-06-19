@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
+#include <freertos/queue.h>
 #include "pinout.h"
 #include <esp_err.h>
 #include <esp_check.h>
@@ -11,6 +12,7 @@
 #include "esp_log.h"
 #include "esp_timer.h"
 #include <math.h>
+#include "bt_comms.h"
 
 typedef struct
 {
@@ -93,7 +95,7 @@ void motors_handler(void *args)
     int dl = get_pulses_update_speed(ctx->m_left);
     int dr = get_pulses_update_speed(ctx->m_right);
 
-    ESP_LOGI("motor", "%d,%d;%f\n", dl, dr, ctx->speed);
+    // ESP_LOGI("motor", "%d,%d;%f\n", dl, dr, ctx->speed);
     float R = dl, omega = 0.0;
     if (dl != dr)
     {
@@ -107,6 +109,9 @@ void motors_handler(void *args)
 
     ctx->speed = (ctx->m_right->speed + ctx->m_left->speed) / 2;
 
+    char buff[50] = {0};
+    sprintf(buff, "%ld,%ld;%f;%f mm/s\n", ctx->x, ctx->y, ctx->azimuth, ctx->speed);
+    bt_comms_send(buff);
     // ESP_LOGI("motor", "%ld,%ld;%f;%f mm/s\n", ctx->x, ctx->y, ctx->azimuth, ctx->speed);
 }
 
@@ -158,9 +163,11 @@ typedef enum
 #define MAX_SPEED 50.0
 void app_main()
 {
+    QueueHandle_t q = xQueueCreate(10, 4);
     // ultrasonic_config(TRIGGER_PIN, ECHO_PIN);
     // xTaskCreate(measure_distance, "dist_meas", configMINIMAL_STACK_SIZE * 2, NULL, 5, NULL);
     algorithm_state_e state = WAITING;
+    bt_comms_init(q);
     initialize_motors();
     initalize_sensors();
     bool obstacle_in_front = sensors_obstacle_front();

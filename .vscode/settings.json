@@ -23,6 +23,17 @@
         "ultrasonic.h": "c",
         "mcpwm.h": "c",
         "drivetrain.h": "c",
-        "sensors.h": "c"
+        "sensors.h": "c",
+        "freertos.h": "c",
+        "esp_clk.h": "c",
+        "esp_spp_api.h": "c",
+        "esp_check.h": "c",
+        "stdio.h": "c",
+        "gpio.h": "c",
+        "esp_log.h": "c",
+        "timer.h": "c",
+        "timer_types_legacy.h": "c",
+        "random": "c",
+        "bdc_motor.h": "c"
     }
 }
