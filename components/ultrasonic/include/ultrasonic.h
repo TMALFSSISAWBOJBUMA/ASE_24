@@ -49,7 +49,6 @@
 #include <freertos/task.h>
 #include <esp_timer.h>
 #include <stdio.h>
-#include <ets_sys.h>
 
 #ifdef __cplusplus
 extern "C" {
