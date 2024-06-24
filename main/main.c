@@ -4,6 +4,7 @@
 #include <freertos/task.h>
 #include <freertos/queue.h>
 #include "pinout.h"
+#include "config.h"
 #include <esp_err.h>
 #include <esp_check.h>
 #include "bdc_motor.h"
@@ -13,6 +14,8 @@
 #include "esp_timer.h"
 #include <math.h>
 #include "bt_comms.h"
+#include "driver/i2c_master.h"
+#include "TMAG5273.h"
 
 typedef struct
 {
@@ -76,7 +79,7 @@ typedef struct
 motor_control_context_t motor_ctrl_ctx;
 #define PULSE_RESOLUTION 4      // mm/pulse
 #define CATERPILLAR_DISTANCE 95 // mm
-#define HANDLER_PERIOD 100       // ms
+#define HANDLER_PERIOD 100      // ms
 
 int get_pulses_update_speed(motor_t *motor)
 {
@@ -164,13 +167,39 @@ typedef enum
 void app_main()
 {
     QueueHandle_t q = xQueueCreate(10, 4);
-    // ultrasonic_config(TRIGGER_PIN, ECHO_PIN);
-    // xTaskCreate(measure_distance, "dist_meas", configMINIMAL_STACK_SIZE * 2, NULL, 5, NULL);
+#ifdef USE_ULTRASONIC
+    ultrasonic_config(TRIGGER_PIN, ECHO_PIN);
+    xTaskCreate(measure_distance, "dist_meas", configMINIMAL_STACK_SIZE * 2, NULL, 5, NULL);
+#endif
     algorithm_state_e state = WAITING;
     bt_comms_init(q);
+#ifndef TEST_MODE
     initialize_motors();
+#endif
     initalize_sensors();
     bool obstacle_in_front = sensors_obstacle_front();
+#ifdef USE_TMAG5273
+    i2c_master_bus_config_t i2c_mst_config = {
+        .clk_source = I2C_CLK_SRC_DEFAULT,
+        .i2c_port = -1,
+        .scl_io_num = SCL_PIN,
+        .sda_io_num = SDA_PIN,
+        .glitch_ignore_cnt = 7,
+        .flags.enable_internal_pullup = false,
+    };
+
+    i2c_master_bus_handle_t bus_handle;
+    ESP_ERROR_CHECK(i2c_new_master_bus(&i2c_mst_config, &bus_handle));
+
+    TMAG5273_device_t hall_sensor;
+    ESP_ERROR_CHECK(TMAG5273_init(TMAG5273_I2C_ADDRESS_INITIAL, bus_handle, &hall_sensor));
+#endif
+#ifdef TEST_MODE
+    while(1){
+        ESP_LOGI("hall", "%f\n", TMAG5273_getZData(&hall_sensor));
+        vTaskDelay(pdMS_TO_TICKS(100));
+    }
+#endif
     while (1)
     {
         vTaskDelay(pdMS_TO_TICKS(20));

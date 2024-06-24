@@ -34,6 +34,11 @@
         "timer.h": "c",
         "timer_types_legacy.h": "c",
         "random": "c",
-        "bdc_motor.h": "c"
+        "bdc_motor.h": "c",
+        "tmag5273_library_defs.h": "c",
+        "tmag5273.h": "c",
+        "pinout.h": "c",
+        "mcpwm_cap.h": "c",
+        "i2c_master.h": "c"
     }
 }
