@@ -17,13 +17,13 @@ settings in the sensor.
 #include "TMAG5273_Library_Defs.h"
 
 
-struct TMAG5273_device_t{
+typedef struct {
     i2c_master_dev_handle_t self;
     i2c_master_bus_handle_t bus;
     uint8_t deviceAddress;
-};
+}TMAG5273_device_t;
 
-typedef struct TMAG5273_device_t *TMAG5273_device_handle_t;
+typedef TMAG5273_device_t *TMAG5273_device_handle_t;
 
 esp_err_t TMAG5273_init(uint8_t sensorAddress, i2c_master_bus_handle_t bus, TMAG5273_device_handle_t sensor);
 int8_t TMAG5273_isConnected(TMAG5273_device_handle_t sensor);
