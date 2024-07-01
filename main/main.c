@@ -16,6 +16,7 @@
 #include "bt_comms.h"
 #include "driver/i2c_master.h"
 #include "TMAG5273.h"
+#include "ux_outputs.h"
 
 typedef struct
 {
@@ -113,8 +114,8 @@ void motors_handler(void *args)
     ctx->speed = (ctx->m_right->speed + ctx->m_left->speed) / 2;
 
     char buff[50] = {0};
-    sprintf(buff, "%ld,%ld;%f;%f mm/s\n", ctx->x, ctx->y, ctx->azimuth, ctx->speed);
-    bt_comms_send(buff);
+    // sprintf(buff, "%ld,%ld;%f;%f mm/s\n", ctx->x, ctx->y, ctx->azimuth, ctx->speed);
+    // bt_comms_send(buff);
     // ESP_LOGI("motor", "%ld,%ld;%f;%f mm/s\n", ctx->x, ctx->y, ctx->azimuth, ctx->speed);
 }
 
@@ -166,17 +167,19 @@ typedef enum
 #define MAX_SPEED 50.0
 void app_main()
 {
-    QueueHandle_t q = xQueueCreate(10, 4);
+    QueueHandle_t q = xQueueCreate(5, 20);
 #ifdef USE_ULTRASONIC
     ultrasonic_config(TRIGGER_PIN, ECHO_PIN);
     xTaskCreate(measure_distance, "dist_meas", configMINIMAL_STACK_SIZE * 2, NULL, 5, NULL);
 #endif
     algorithm_state_e state = WAITING;
     bt_comms_init(q);
-#ifndef TEST_MODE
+// #ifndef TEST_MODE
     initialize_motors();
-#endif
+// #endif
     initalize_sensors();
+    initalize_buzzer(BUZZER_PIN);
+    buzzer_start();
     bool obstacle_in_front = sensors_obstacle_front();
 #ifdef USE_TMAG5273
     i2c_master_bus_config_t i2c_mst_config = {
@@ -195,9 +198,30 @@ void app_main()
     ESP_ERROR_CHECK(TMAG5273_init(TMAG5273_I2C_ADDRESS_INITIAL, bus_handle, &hall_sensor));
 #endif
 #ifdef TEST_MODE
-    while(1){
-        ESP_LOGI("hall", "%f\n", TMAG5273_getZData(&hall_sensor));
+    uint16_t freq = 500;
+    int8_t diff = 100;
+    while (1)
+    {
+        // ESP_LOGI("hall", "%f\n", TMAG5273_getZData(&hall_sensor));
+
+        char buff[50] = {0};
+        sprintf(buff, "%2.4f;%d;%d;%d;%d;%d;%3.2f;%3.2f\n", TMAG5273_getZData(&hall_sensor),
+                sensors_obstacle_front(),
+                sensors_obstacle_back(),
+                sensors_obstacle_right(),
+                sensors_obstacle_left(),
+                sensors_tape_detected(),
+                motor_ctrl_ctx.m_left->speed,
+                motor_ctrl_ctx.m_right->speed);
+        bt_comms_send(buff);
+
+        if ((uxQueueMessagesWaiting(q) > 0) && (xQueueReceive(q, buff, (TickType_t)5) == pdTRUE))
+            ESP_LOGI("test", "recv: %s", buff);
+
         vTaskDelay(pdMS_TO_TICKS(100));
+        buzzer_set_freq(freq);
+        freq += diff;
+        if(freq>5000 || freq<600) diff *= -1;
     }
 #endif
     while (1)
