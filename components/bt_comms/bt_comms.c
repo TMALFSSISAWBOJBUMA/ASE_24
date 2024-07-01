@@ -73,9 +73,9 @@ static void esp_spp_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t *param)
                  param->data_ind.len, param->data_ind.handle);
         if (param->data_ind.len < 128)
         {
-            ESP_LOGI(SPP_TAG, "RECV: %s", param->data_ind.data);
+            // ESP_LOGI(SPP_TAG, "RECV: %s", param->data_ind.data);
 
-            // xQueueSend(msg_queue, param->data_ind.data, 0);
+            xQueueSend(msg_queue, param->data_ind.data, pdMS_TO_TICKS(100));
         }
         break;
     case ESP_SPP_CONG_EVT:
