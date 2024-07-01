@@ -5,11 +5,11 @@
 QueueHandle_t msg_queue;
 uint32_t conn_handle;
 
-
 static char bda_str[18] = {0};
-static char *bda2str(uint8_t * bda, char *str, size_t size)
+static char *bda2str(uint8_t *bda, char *str, size_t size)
 {
-    if (bda == NULL || str == NULL || size < 18) {
+    if (bda == NULL || str == NULL || size < 18)
+    {
         return NULL;
     }
 
@@ -51,7 +51,7 @@ static void esp_spp_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t *param)
         {
             ESP_LOGI(SPP_TAG, "ESP_SPP_START_EVT handle:%ld sec_id:%d scn:%d", param->start.handle, param->start.sec_id,
                      param->start.scn);
-            esp_bt_dev_set_device_name(EXAMPLE_DEVICE_NAME);
+            esp_bt_dev_set_device_name(DEVICE_NAME);
             esp_bt_gap_set_scan_mode(ESP_BT_CONNECTABLE, ESP_BT_GENERAL_DISCOVERABLE);
         }
         else
@@ -86,7 +86,7 @@ static void esp_spp_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t *param)
         break;
     case ESP_SPP_SRV_OPEN_EVT:
         conn_handle = param->srv_open.handle;
-        ESP_LOGI(SPP_TAG, "ESP_SPP_SRV_OPEN_EVT status:%d handle:%"PRIu32", rem_bda:[%s]", param->srv_open.status,
+        ESP_LOGI(SPP_TAG, "ESP_SPP_SRV_OPEN_EVT status:%d handle:%" PRIu32 ", rem_bda:[%s]", param->srv_open.status,
                  param->srv_open.handle, bda2str(param->srv_open.rem_bda, bda_str, sizeof(bda_str)));
         break;
     case ESP_SPP_SRV_STOP_EVT:
@@ -223,5 +223,4 @@ void bt_comms_init(QueueHandle_t recv_q)
     esp_bt_pin_code_t pin_code;
     esp_bt_gap_set_pin(pin_type, 0, pin_code);
     ESP_LOGI(SPP_TAG, "Own address:[%s]", bda2str((uint8_t *)esp_bt_dev_get_address(), bda_str, sizeof(bda_str)));
-
 }

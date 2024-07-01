@@ -16,12 +16,12 @@ settings in the sensor.
 #include "driver/i2c_master.h"
 #include "TMAG5273_Library_Defs.h"
 
-
-typedef struct {
+typedef struct
+{
     i2c_master_dev_handle_t self;
     i2c_master_bus_handle_t bus;
     uint8_t deviceAddress;
-}TMAG5273_device_t;
+} TMAG5273_device_t;
 
 typedef TMAG5273_device_t *TMAG5273_device_handle_t;
 
@@ -110,6 +110,5 @@ float TMAG5273_getMagnitudeResult(TMAG5273_device_handle_t sensor);
 uint8_t TMAG5273_getInterruptPinStatus(TMAG5273_device_handle_t sensor);
 uint8_t TMAG5273_getDeviceStatus(TMAG5273_device_handle_t sensor);
 int8_t TMAG5273_getError(TMAG5273_device_handle_t sensor);
-
 
 #endif

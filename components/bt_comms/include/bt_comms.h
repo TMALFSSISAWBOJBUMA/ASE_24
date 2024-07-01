@@ -15,7 +15,7 @@
 
 #define SPP_TAG "BT_SPP"
 #define SPP_SERVER_NAME "SPP_SERVER"
-#define EXAMPLE_DEVICE_NAME "R4-EIT"
+#define DEVICE_NAME "R4-EIT"
 #define MAX_MSG_LEN 30
 
 void bt_comms_init(QueueHandle_t recv_q);
