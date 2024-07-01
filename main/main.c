@@ -16,7 +16,8 @@
 #include "bt_comms.h"
 #include "driver/i2c_master.h"
 #include "TMAG5273.h"
-#include "ux_outputs.h"
+#include "buzzer.h"
+#include "servo.h"
 
 typedef struct
 {
@@ -85,7 +86,7 @@ motor_control_context_t motor_ctrl_ctx;
 int get_pulses_update_speed(motor_t *motor)
 {
     int pcnt_val;
-    pcnt_unit_get_count(motor->encoder, &pcnt_val);
+    ESP_ERROR_CHECK(pcnt_unit_get_count(motor->encoder, &pcnt_val));
     int dp = (pcnt_val - motor->last_pulses) * PULSE_RESOLUTION;
     motor->last_pulses = pcnt_val;
     motor->speed = dp / (HANDLER_PERIOD / 1e3);
@@ -113,7 +114,7 @@ void motors_handler(void *args)
 
     ctx->speed = (ctx->m_right->speed + ctx->m_left->speed) / 2;
 
-    char buff[50] = {0};
+    // char buff[50] = {0};
     // sprintf(buff, "%ld,%ld;%f;%f mm/s\n", ctx->x, ctx->y, ctx->azimuth, ctx->speed);
     // bt_comms_send(buff);
     // ESP_LOGI("motor", "%ld,%ld;%f;%f mm/s\n", ctx->x, ctx->y, ctx->azimuth, ctx->speed);
@@ -165,6 +166,7 @@ typedef enum
 } algorithm_state_e;
 
 #define MAX_SPEED 50.0
+
 void app_main()
 {
     QueueHandle_t q = xQueueCreate(5, 20);
@@ -174,13 +176,9 @@ void app_main()
 #endif
     algorithm_state_e state = WAITING;
     bt_comms_init(q);
-// #ifndef TEST_MODE
     initialize_motors();
-// #endif
     initalize_sensors();
     initalize_buzzer(BUZZER_PIN);
-    buzzer_start();
-    bool obstacle_in_front = sensors_obstacle_front();
 #ifdef USE_TMAG5273
     i2c_master_bus_config_t i2c_mst_config = {
         .clk_source = I2C_CLK_SRC_DEFAULT,
@@ -188,24 +186,26 @@ void app_main()
         .scl_io_num = SCL_PIN,
         .sda_io_num = SDA_PIN,
         .glitch_ignore_cnt = 7,
-        .flags.enable_internal_pullup = false,
+        .flags.enable_internal_pullup = true,
     };
 
     i2c_master_bus_handle_t bus_handle;
     ESP_ERROR_CHECK(i2c_new_master_bus(&i2c_mst_config, &bus_handle));
 
     TMAG5273_device_t hall_sensor;
-    ESP_ERROR_CHECK(TMAG5273_init(TMAG5273_I2C_ADDRESS_INITIAL, bus_handle, &hall_sensor));
+    ESP_ERROR_CHECK_WITHOUT_ABORT(TMAG5273_init(TMAG5273_I2C_ADDRESS_INITIAL, bus_handle, &hall_sensor));
 #endif
 #ifdef TEST_MODE
-    uint16_t freq = 500;
-    int8_t diff = 100;
+    xTaskCreate(&test_buzzer, "test_buzzer", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
+    xTaskCreate(&test_servo, "test_servo", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
     while (1)
     {
         // ESP_LOGI("hall", "%f\n", TMAG5273_getZData(&hall_sensor));
 
         char buff[50] = {0};
-        sprintf(buff, "%2.4f;%d;%d;%d;%d;%d;%3.2f;%3.2f\n", TMAG5273_getZData(&hall_sensor),
+        sprintf(buff, "%2.4f;%d;%d;%d;%d;%d;%3.2f;%3.2f\n", 
+                // TMAG5273_getZData(&hall_sensor),
+                3.0,
                 sensors_obstacle_front(),
                 sensors_obstacle_back(),
                 sensors_obstacle_right(),
@@ -215,15 +215,15 @@ void app_main()
                 motor_ctrl_ctx.m_right->speed);
         bt_comms_send(buff);
 
-        if ((uxQueueMessagesWaiting(q) > 0) && (xQueueReceive(q, buff, (TickType_t)5) == pdTRUE))
+        if ((uxQueueMessagesWaiting(q) > 0) && (xQueueReceive(q, buff, (TickType_t)1) == pdTRUE))
             ESP_LOGI("test", "recv: %s", buff);
 
         vTaskDelay(pdMS_TO_TICKS(100));
-        buzzer_set_freq(freq);
-        freq += diff;
-        if(freq>5000 || freq<600) diff *= -1;
     }
+
 #endif
+
+    bool obstacle_in_front = sensors_obstacle_front();
     while (1)
     {
         vTaskDelay(pdMS_TO_TICKS(20));

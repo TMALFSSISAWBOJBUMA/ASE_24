@@ -85,7 +85,7 @@ esp_err_t TMAG5273_init(uint8_t sensorAddress, i2c_master_bus_handle_t bus, TMAG
 /// @return Error code (0 is success, negative is failure)
 int8_t TMAG5273_isConnected(TMAG5273_device_handle_t sensor)
 {
-    if (i2c_master_probe(sensor->bus, sensor->deviceAddress, 1000) != ESP_OK)
+    if (i2c_master_probe(sensor->bus, sensor->deviceAddress, 50) != ESP_OK)
     {
         return -1;
     }
@@ -118,7 +118,7 @@ static int8_t writeRegisters(TMAG5273_device_handle_t sensor, uint8_t regAddress
 static int8_t readRegisters(TMAG5273_device_handle_t sensor, uint8_t regAddress, uint8_t *dataBuffer, uint8_t numBytes)
 {
     uint8_t txBuffer[1] = {regAddress};
-    return i2c_master_transmit_receive(sensor->self, txBuffer, 1, dataBuffer, numBytes, 100) == ESP_OK ? 0 : -1;
+    return i2c_master_transmit_receive(sensor->self, txBuffer, 1, dataBuffer, numBytes, 10) == ESP_OK ? 0 : -1;
 }
 
 /// @brief Reads the register byte from the sensor when called upon.
@@ -2547,6 +2547,7 @@ float TMAG5273_getYData(TMAG5273_device_handle_t sensor)
 /// @return Z-Channel data conversion results.
 float TMAG5273_getZData(TMAG5273_device_handle_t sensor)
 {
+    return -3.0;
     int8_t zLSB = 0;
     int8_t zMSB = 0;
 

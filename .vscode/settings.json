@@ -39,6 +39,10 @@
         "tmag5273.h": "c",
         "pinout.h": "c",
         "mcpwm_cap.h": "c",
-        "i2c_master.h": "c"
+        "i2c_master.h": "c",
+        "stdbool.h": "c",
+        "servo.h": "c",
+        "ledc.h": "c",
+        "stdlib.h": "c"
     }
 }
