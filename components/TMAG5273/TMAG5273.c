@@ -32,7 +32,7 @@ esp_err_t TMAG5273_init(uint8_t sensorAddress, i2c_master_bus_handle_t bus, TMAG
     i2c_device_config_t dev_cfg = {
         .dev_addr_length = I2C_ADDR_BIT_LEN_7,
         .device_address = sensor->deviceAddress,
-        .scl_speed_hz = 50000,
+        .scl_speed_hz = 100000,
     };
 
     ESP_RETURN_ON_ERROR(i2c_master_bus_add_device(sensor->bus, &dev_cfg, &sensor->self), "TMAG5273", "Failed to add device");
@@ -42,8 +42,8 @@ esp_err_t TMAG5273_init(uint8_t sensorAddress, i2c_master_bus_handle_t bus, TMAG
     TMAG5273_setMagneticChannel(sensor, TMAG5273_X_Y_Z_ENABLE);
     TMAG5273_setTemperatureEn(sensor, true);
     TMAG5273_setOperatingMode(sensor, TMAG5273_CONTINUOUS_MEASURE_MODE);
-    TMAG5273_setXYAxisRange(sensor, TMAG5273_RANGE_80MT);
-    TMAG5273_setZAxisRange(sensor, TMAG5273_RANGE_80MT);
+    TMAG5273_setXYAxisRange(sensor, TMAG5273_RANGE_40MT);
+    TMAG5273_setZAxisRange(sensor, TMAG5273_RANGE_40MT);
 
     if (TMAG5273_getError(sensor) != 0)
     {
@@ -85,7 +85,7 @@ esp_err_t TMAG5273_init(uint8_t sensorAddress, i2c_master_bus_handle_t bus, TMAG
 /// @return Error code (0 is success, negative is failure)
 int8_t TMAG5273_isConnected(TMAG5273_device_handle_t sensor)
 {
-    if (i2c_master_probe(sensor->bus, sensor->deviceAddress, 50) != ESP_OK)
+    if (i2c_master_probe(sensor->bus, sensor->deviceAddress, 1000) != ESP_OK)
     {
         return -1;
     }
