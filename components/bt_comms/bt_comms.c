@@ -71,11 +71,13 @@ static void esp_spp_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t *param)
          */
         ESP_LOGI(SPP_TAG, "ESP_SPP_DATA_IND_EVT len:%d handle:%" PRIu32,
                  param->data_ind.len, param->data_ind.handle);
-        if (param->data_ind.len < 128)
+        if (param->data_ind.len < MAX_MSG_LEN)
         {
-            // ESP_LOGI(SPP_TAG, "RECV: %s", param->data_ind.data);
+            char buff[MAX_MSG_LEN] = {0};
+            for (uint8_t i = 0; i < param->data_ind.len; i++)
+                buff[i] = param->data_ind.data[i];
 
-            xQueueSend(msg_queue, param->data_ind.data, pdMS_TO_TICKS(100));
+            xQueueSend(msg_queue, buff, 0);
         }
         break;
     case ESP_SPP_CONG_EVT:
@@ -161,6 +163,7 @@ esp_err_t bt_comms_send(const char *msg)
 
 void bt_comms_init(QueueHandle_t recv_q)
 {
+    msg_queue = recv_q;
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
     {
@@ -223,4 +226,20 @@ void bt_comms_init(QueueHandle_t recv_q)
     esp_bt_pin_code_t pin_code;
     esp_bt_gap_set_pin(pin_type, 0, pin_code);
     ESP_LOGI(SPP_TAG, "Own address:[%s]", bda2str((uint8_t *)esp_bt_dev_get_address(), bda_str, sizeof(bda_str)));
+}
+
+void test_bt_comms(void *pvParameters)
+{
+    char buff[MAX_MSG_LEN] = {0};
+    for (;;)
+    {
+        while (!conn_handle)
+            vTaskDelay(pdMS_TO_TICKS(500));
+        bt_comms_send("BT echo testing");
+        while (conn_handle){
+            if(xQueueReceive(msg_queue, buff, pdMS_TO_TICKS(100)) == pdTRUE)
+                bt_comms_send(buff);
+            vTaskDelay(pdMS_TO_TICKS(100));
+        }
+    }
 }

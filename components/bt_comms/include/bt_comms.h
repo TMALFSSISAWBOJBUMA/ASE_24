@@ -22,4 +22,15 @@ void bt_comms_init(QueueHandle_t recv_q);
 
 esp_err_t bt_comms_send(const char *msg);
 
+/**
+ * @brief   Use:
+ *          QueueHandle_t q = xQueueCreate(5, MAX_MSG_LEN);
+ *          bt_comms_init(q);
+ * 
+ *          xTaskCreate(test_bt_comms, "bt_comms", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
+ * 
+ * @param pvParameters unused
+ */
+void test_bt_comms(void *pvParameters);
+
 #endif
