@@ -111,7 +111,7 @@ void algorithm(void *pvParameters)
         ctx->sensors.right = sensors_obstacle_right();
         ctx->sensors.left = sensors_obstacle_left();
         ctx->sensors.tape = sensors_tape_detected();
-
+        keep_state = keep_state ? keep_state - 1 : 0;
         // ESP_LOGI("main", "%d -> %d\n", state, obstacle_in_front);
         switch (ctx->state)
         {
@@ -121,23 +121,34 @@ void algorithm(void *pvParameters)
                 motors_speed(0);
                 vTaskDelay(pdMS_TO_TICKS(100));
                 ctx->state = REVERSING;
-                keep_state = 10;
+                keep_state = 11;
             }
             break;
         case REVERSING:
-            motors_direction(false);
-            motors_speed(MAX_SPEED);
-            vTaskDelay(pdMS_TO_TICKS(1200));
-            motors_speed(0);
-            ctx->state = TWISTING;
+            if (keep_state == 10)
+            {
+                motors_direction(false);
+                motors_speed(MAX_SPEED);
+            }
+            else if (!keep_state || ctx->sensors.back)
+            {
+                motors_speed(0);
+                keep_state = 11;
+                ctx->state = TWISTING;
+            }
             break;
         case TWISTING:
-            bdc_motor_forward(app_context.motor_ctx.m_left.motor);
-            bdc_motor_reverse(app_context.motor_ctx.m_right.motor);
-            motors_speed(MAX_SPEED);
-            vTaskDelay(pdMS_TO_TICKS(500));
-            motors_speed(0);
-            ctx->state = WAITING;
+            if (keep_state == 10)
+            {
+                bdc_motor_forward(app_context.motor_ctx.m_left.motor);
+                bdc_motor_reverse(app_context.motor_ctx.m_right.motor);
+                motors_speed(MAX_SPEED);
+            }
+            else if (!keep_state)
+            {
+                motors_speed(0);
+                ctx->state = WAITING;
+            }
             break;
         case WAITING:
             if (!ctx->run)
