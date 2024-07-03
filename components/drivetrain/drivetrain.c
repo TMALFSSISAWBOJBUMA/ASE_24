@@ -1,7 +1,8 @@
 #include <stdio.h>
 #include "drivetrain.h"
 
-static esp_err_t set_edge(pcnt_channel_handle_t channel, pcnt_channel_edge_action_t edge_action){
+static esp_err_t set_edge(pcnt_channel_handle_t channel, pcnt_channel_edge_action_t edge_action)
+{
     return pcnt_channel_set_edge_action(channel, edge_action, edge_action);
 }
 
@@ -24,18 +25,17 @@ esp_err_t configure_pcnt(gpio_num_t count_pin, pcnt_unit_handle_t *ret_unit, pcn
     return pcnt_unit_start(*ret_unit);
 }
 
-int get_pulses_update_speed(motor_driver_t *motor)
+int get_distance_update_speed(motor_driver_t *motor)
 {
     int pcnt_val;
     pcnt_unit_get_count(motor->encoder, &pcnt_val);
     int dp = (pcnt_val - motor->last_pulses) * PULSE_RESOLUTION;
     motor->last_pulses = pcnt_val;
-    motor->speed = dp / (HANDLER_PERIOD / 1e3);
+    motor->speed = (float)dp / (HANDLER_PERIOD / 1e3);
     return dp;
 }
 
-
-void initialize_motor(motor_driver_config_t* config, motor_driver_t* driver)
+void initialize_motor(motor_driver_config_t *config, motor_driver_t *driver)
 {
     bdc_motor_config_t motor_config = {
         .pwm_freq_hz = PMW_FREQUENCY,

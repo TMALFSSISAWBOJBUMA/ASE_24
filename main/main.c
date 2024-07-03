@@ -45,27 +45,29 @@ void motors_handler(void *args)
 {
     motor_control_context_t *ctx = (motor_control_context_t *)args;
 
-    int dl = get_pulses_update_speed(&ctx->m_left);
-    int dr = get_pulses_update_speed(&ctx->m_right);
+    int dl = get_distance_update_speed(&ctx->m_left);
+    int dr = get_distance_update_speed(&ctx->m_right);
 
-    // ESP_LOGI("motor", "%d,%d;%f\n", dl, dr, ctx->speed);
-    float R = dl, omega = 0.0;
-    if (dl != dr)
+    if (dl == dr)
     {
-        R = CATERPILLAR_DISTANCE / 2 * (dl + dr) / (dr - dl);
-        omega = (dr - dl) / CATERPILLAR_DISTANCE;
+        ctx->x += (float)dl * cos(ctx->azimuth);
+        ctx->y += (float)dl * sin(ctx->azimuth);
+    }
+    else
+    {
+        float R = dl, omega = 0.0;
+        R = TRACKS_DISTANCE / 2.0f * (float)(dl + dr) / (float)(dr - dl);
+        omega = (float)(dr - dl) / TRACKS_DISTANCE;
+        ctx->x += R * (sin(ctx->azimuth) * (cos(omega) - 1.0f) + cos(ctx->azimuth) * sin(omega));
+        ctx->y += R * (cos(ctx->azimuth) * (1.0f - cos(omega)) + sin(ctx->azimuth) * sin(omega));
+        ctx->azimuth += omega;
     }
 
-    ctx->azimuth += omega;
-    ctx->x += R * cos(ctx->azimuth);
-    ctx->y += R * sin(ctx->azimuth);
+    ctx->speed = (ctx->m_right.speed + ctx->m_left.speed) / 2.0f;
 
-    ctx->speed = (ctx->m_right.speed + ctx->m_left.speed) / 2;
-
-    // char buff[50] = {0};
-    // sprintf(buff, "%ld,%ld;%f;%f mm/s\n", ctx->x, ctx->y, ctx->azimuth, ctx->speed);
+    // char buff[60] = {0};
+    // sprintf(buff, "%3d,%3d,%3.4f,%3.4f;%2.5f\n", dl, dr, ctx->x, ctx->y, ctx->azimuth);
     // bt_comms_send(buff);
-    // ESP_LOGI("motor", "%ld,%ld;%f;%f mm/s\n", ctx->x, ctx->y, ctx->azimuth, ctx->speed);
 }
 
 void initialize_motors()
@@ -94,22 +96,13 @@ void initialize_motors()
     bdc_motor_enable(app_context.motor_ctx.m_right.motor);
 }
 
-typedef enum
-{
-    FORWARD,
-    REVERSING,
-    TWISTING,
-    STOPPING,
-    WAITING,
-    FINISHED
-} algorithm_state_e;
-
 #define MAX_SPEED 50.0
 void algorithm(void *pvParameters)
 {
     app_context_t *ctx = (app_context_t *)pvParameters;
-    algorithm_state_e state = WAITING;
+    ctx->state = WAITING;
     char buff[MAX_MSG_LEN] = {0};
+    uint8_t keep_state = 0;
     while (1)
     {
         vTaskDelay(pdMS_TO_TICKS(30));
@@ -120,23 +113,15 @@ void algorithm(void *pvParameters)
         ctx->sensors.tape = sensors_tape_detected();
 
         // ESP_LOGI("main", "%d -> %d\n", state, obstacle_in_front);
-        switch (state)
+        switch (ctx->state)
         {
         case FORWARD:
-            if (ctx->sensors.front)
+            if (ctx->sensors.front || ctx->sensors.tape)
             {
                 motors_speed(0);
                 vTaskDelay(pdMS_TO_TICKS(100));
-                state = REVERSING;
-            }
-            else if (ctx->sensors.tape)
-            {
-                motors_speed(0);
-                vTaskDelay(pdMS_TO_TICKS(100));
-                if (fabs(ctx->sensors.mag_z) > 2.0)
-                    state = FINISHED;
-                else
-                    state = REVERSING;
+                ctx->state = REVERSING;
+                keep_state = 10;
             }
             break;
         case REVERSING:
@@ -144,7 +129,7 @@ void algorithm(void *pvParameters)
             motors_speed(MAX_SPEED);
             vTaskDelay(pdMS_TO_TICKS(1200));
             motors_speed(0);
-            state = TWISTING;
+            ctx->state = TWISTING;
             break;
         case TWISTING:
             bdc_motor_forward(app_context.motor_ctx.m_left.motor);
@@ -152,19 +137,22 @@ void algorithm(void *pvParameters)
             motors_speed(MAX_SPEED);
             vTaskDelay(pdMS_TO_TICKS(500));
             motors_speed(0);
-            state = WAITING;
+            ctx->state = WAITING;
             break;
         case WAITING:
             if (!ctx->run)
                 break;
-            state = FORWARD;
+            ctx->state = FORWARD;
             motors_direction(true);
             motors_speed(MAX_SPEED);
+            break;
+        case FINISHED:
+            motors_speed(0);
             break;
         case STOPPING:
             motors_speed(0);
         default:
-            state = WAITING;
+            ctx->state = WAITING;
         }
 
         if (xQueueReceive(ctx->BT_q, buff, (TickType_t)5) == pdTRUE)
@@ -178,7 +166,16 @@ void algorithm(void *pvParameters)
             {
                 ESP_LOGI("algorithm", "stopping");
                 ctx->run = false;
-                state = STOPPING;
+                ctx->state = STOPPING;
+            }
+        }
+
+        if (xQueueReceive(ctx->TMAG_q, &ctx->sensors.mag_z, (TickType_t)5) == pdTRUE)
+        {
+            if (ctx->sensors.tape && fabs(ctx->sensors.mag_z) > 2.0)
+            {
+                ctx->state = FINISHED;
+                ESP_LOGI("algorithm", "finished");
             }
         }
     }
@@ -198,10 +195,10 @@ void read_TMAG(void *pvParameters)
 
     i2c_master_bus_handle_t bus_handle;
     ESP_ERROR_CHECK(i2c_new_master_bus(&i2c_mst_config, &bus_handle));
-    vTaskDelay(1);
     TMAG5273_device_t hall_sensor;
     ESP_ERROR_CHECK(TMAG5273_init(TMAG5273_I2C_ADDRESS_INITIAL, bus_handle, &hall_sensor));
     float readout;
+    vTaskDelay(1);
     while (1)
     {
         readout = TMAG5273_getZData(&hall_sensor);
@@ -218,17 +215,16 @@ void app_main()
 #endif
     app_context.TMAG_q = xQueueCreate(2, sizeof(float));
 #ifdef USE_TMAG5273
-    xTaskCreatePinnedToCore(read_TMAG, "hall", configMINIMAL_STACK_SIZE*2, &app_context, 2, NULL, 1);
+    xTaskCreatePinnedToCore(read_TMAG, "hall", configMINIMAL_STACK_SIZE * 2, &app_context, 2, NULL, 1);
 #endif
-    initialize_motors();
     initalize_sensors();
     // initalize_buzzer(BUZZER_PIN);
-    // buzzer_start();
-    initalize_servo(SERVO_PIN);
-    xTaskCreate(&test_servo, "servo", configMINIMAL_STACK_SIZE*2, NULL, 1, NULL);
+    // initalize_servo(SERVO_PIN);
+    // xTaskCreate(&test_servo, "servo", configMINIMAL_STACK_SIZE * 2, NULL, 1, NULL);
     app_context.BT_q = xQueueCreate(5, MAX_MSG_LEN);
     xTaskCreate(&algorithm, "algorithm", configMINIMAL_STACK_SIZE * 2, &app_context, 1, NULL);
     bt_comms_init(app_context.BT_q);
+    initialize_motors();
 
     while (1)
     {

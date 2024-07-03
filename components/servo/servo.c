@@ -40,7 +40,7 @@ void test_servo(void *pvParameters)
     float angle = 0.0;
     for (;;)
     {
-        ESP_LOGI("servo", "Setting: %f", angle);
+        // ESP_LOGI("servo", "Setting: %f", angle);
         ESP_ERROR_CHECK_WITHOUT_ABORT(servo_set_angle(angle));
         angle = (float)(rand() % 180);
         vTaskDelay(pdMS_TO_TICKS((rand() % 10) * 1000 + 500));

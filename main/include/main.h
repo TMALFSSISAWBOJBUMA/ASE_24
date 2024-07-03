@@ -7,8 +7,7 @@
 typedef struct
 {
     motor_driver_t m_left, m_right;
-    int32_t x, y;
-    float speed, azimuth;
+    float x, y, speed, azimuth;
 } motor_control_context_t;
 
 typedef struct
@@ -21,11 +20,21 @@ typedef struct
     float mag_z;
 } sensors_readout_t;
 
+typedef enum
+{
+    FORWARD,
+    REVERSING,
+    TWISTING,
+    STOPPING,
+    WAITING,
+    FINISHED
+} algorithm_state_e;
 typedef struct
 {
     motor_control_context_t motor_ctx;
     QueueHandle_t BT_q, TMAG_q;
     sensors_readout_t sensors;
+    algorithm_state_e state;
     bool run;
 } app_context_t;
 

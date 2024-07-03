@@ -15,7 +15,11 @@ static int8_t readRegisters(TMAG5273_device_handle_t sensor, uint8_t regAddress,
 static uint8_t readRegister(TMAG5273_device_handle_t sensor, uint8_t regAddress);
 static uint8_t writeRegister(TMAG5273_device_handle_t sensor, uint8_t regAddress, uint8_t data);
 
-#define bitWrite(x, n, b) if(b) (x) |= (1 << (n)); else (x) &= ~(1 << (n))
+#define bitWrite(x, n, b)  \
+    if (b)                 \
+        (x) |= (1 << (n)); \
+    else                   \
+        (x) &= ~(1 << (n))
 #define bitRead(x, n) ((x & (1 << (n))) != 0)
 
 /// @brief Begin communication with the TMAG over I2C, initialize it, and
@@ -36,8 +40,8 @@ esp_err_t TMAG5273_init(uint8_t sensorAddress, i2c_master_bus_handle_t bus, TMAG
     };
 
     ESP_RETURN_ON_ERROR(i2c_master_bus_add_device(sensor->bus, &dev_cfg, &sensor->self), "TMAG5273", "Failed to add device");
-    
-    ESP_RETURN_ON_FALSE(TMAG5273_isConnected(sensor) == 0, ESP_FAIL,"TMAG5273", "Device not connected");
+
+    ESP_RETURN_ON_FALSE(TMAG5273_isConnected(sensor) == 0, ESP_FAIL, "TMAG5273", "Device not connected");
 
     TMAG5273_setMagneticChannel(sensor, TMAG5273_X_Y_Z_ENABLE);
     TMAG5273_setTemperatureEn(sensor, true);
@@ -1089,7 +1093,7 @@ int8_t TMAG5273_setZAxisRange(TMAG5273_device_handle_t sensor, uint8_t zAxisRang
 /// @return Error code (0 is success, negative is failure, positive is warning)
 int8_t TMAG5273_setXThreshold(TMAG5273_device_handle_t sensor, float xThreshold)
 {
-    uint8_t range =TMAG5273_getXYAxisRange(sensor);
+    uint8_t range = TMAG5273_getXYAxisRange(sensor);
     // Mulyiply raw value by threshold equation in datasheet
     int8_t threshold = xThreshold * 128 / (40 * (1 + range));
 
@@ -1108,7 +1112,7 @@ int8_t TMAG5273_setXThreshold(TMAG5273_device_handle_t sensor, float xThreshold)
 /// @return Error code (0 is success, negative is failure, positive is warning)
 int8_t TMAG5273_setYThreshold(TMAG5273_device_handle_t sensor, float yThreshold)
 {
-    uint8_t range =TMAG5273_getXYAxisRange(sensor);
+    uint8_t range = TMAG5273_getXYAxisRange(sensor);
     // Mulyiply raw value by threshold equation in datasheet
     int8_t threshold = yThreshold * 128 / (40 * (1 + range));
     // Write the correct value to the register
@@ -1919,7 +1923,7 @@ int8_t TMAG5273_getMagneticOffset2(TMAG5273_device_handle_t sensor)
 
     // Choose the XY axis range
     uint8_t channelSelect = TMAG5273_getAngleEn(sensor); // 1, 2, or 3
-    uint8_t rangeValXY =TMAG5273_getXYAxisRange(sensor);
+    uint8_t rangeValXY = TMAG5273_getXYAxisRange(sensor);
     uint8_t rangeXY = 0;
     if (rangeValXY == 0)
     {
@@ -2071,7 +2075,7 @@ float TMAG5273_getXThreshold(TMAG5273_device_handle_t sensor)
 {
     int8_t xThresh = 0;
     xThresh = readRegister(sensor, TMAG5273_REG_X_THR_CONFIG);
-    uint8_t range =TMAG5273_getXYAxisRange(sensor);
+    uint8_t range = TMAG5273_getXYAxisRange(sensor);
 
     float thresh = (float)(40 * (1 + range)) / 128 * xThresh;
 
@@ -2088,7 +2092,7 @@ float TMAG5273_getYThreshold(TMAG5273_device_handle_t sensor)
 {
     int8_t yThresh = 0;
     yThresh = readRegister(sensor, TMAG5273_REG_Y_THR_CONFIG);
-    uint8_t range =TMAG5273_getXYAxisRange(sensor);
+    uint8_t range = TMAG5273_getXYAxisRange(sensor);
 
     float thresh = (float)(40 * (1 + range)) / 128 * yThresh;
 
@@ -2547,7 +2551,6 @@ float TMAG5273_getYData(TMAG5273_device_handle_t sensor)
 /// @return Z-Channel data conversion results.
 float TMAG5273_getZData(TMAG5273_device_handle_t sensor)
 {
-    return -3.0;
     int8_t zLSB = 0;
     int8_t zMSB = 0;
 
