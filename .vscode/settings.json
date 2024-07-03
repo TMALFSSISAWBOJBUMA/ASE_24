@@ -43,6 +43,10 @@
         "stdbool.h": "c",
         "servo.h": "c",
         "ledc.h": "c",
-        "stdlib.h": "c"
+        "stdlib.h": "c",
+        "pulse_cnt.h": "c",
+        "queue.h": "c",
+        "stdint.h": "c",
+        "cstdint": "c"
     }
 }
