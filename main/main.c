@@ -16,8 +16,9 @@
 #include "bt_comms.h"
 #include "driver/i2c_master.h"
 #include "TMAG5273.h"
-#include "buzzer.h"
 #include "servo.h"
+#include "buzzer.h"
+#include <string.h>
 
 typedef struct
 {
@@ -78,6 +79,12 @@ typedef struct
     float speed, azimuth;
 } motor_control_context_t;
 
+typedef struct
+{
+    motor_control_context_t motor_ctx;
+
+} app_context_t;
+
 motor_control_context_t motor_ctrl_ctx;
 #define PULSE_RESOLUTION 4      // mm/pulse
 #define CATERPILLAR_DISTANCE 95 // mm
@@ -86,7 +93,7 @@ motor_control_context_t motor_ctrl_ctx;
 int get_pulses_update_speed(motor_t *motor)
 {
     int pcnt_val;
-    ESP_ERROR_CHECK(pcnt_unit_get_count(motor->encoder, &pcnt_val));
+    pcnt_unit_get_count(motor->encoder, &pcnt_val);
     int dp = (pcnt_val - motor->last_pulses) * PULSE_RESOLUTION;
     motor->last_pulses = pcnt_val;
     motor->speed = dp / (HANDLER_PERIOD / 1e3);
@@ -166,67 +173,13 @@ typedef enum
 } algorithm_state_e;
 
 #define MAX_SPEED 50.0
-
-void app_main()
+void algorithm(void *pvParameters)
 {
-    QueueHandle_t q = xQueueCreate(5, 20);
-#ifdef USE_ULTRASONIC
-    ultrasonic_config(TRIGGER_PIN, ECHO_PIN);
-    xTaskCreate(measure_distance, "dist_meas", configMINIMAL_STACK_SIZE * 2, NULL, 5, NULL);
-#endif
-    algorithm_state_e state = WAITING;
-    bt_comms_init(q);
-    initialize_motors();
-    initalize_sensors();
-    initalize_buzzer(BUZZER_PIN);
-#ifdef USE_TMAG5273
-    i2c_master_bus_config_t i2c_mst_config = {
-        .clk_source = I2C_CLK_SRC_DEFAULT,
-        .i2c_port = -1,
-        .scl_io_num = SCL_PIN,
-        .sda_io_num = SDA_PIN,
-        .glitch_ignore_cnt = 7,
-        .flags.enable_internal_pullup = true,
-    };
-
-    i2c_master_bus_handle_t bus_handle;
-    ESP_ERROR_CHECK(i2c_new_master_bus(&i2c_mst_config, &bus_handle));
-
-    TMAG5273_device_t hall_sensor;
-    ESP_ERROR_CHECK_WITHOUT_ABORT(TMAG5273_init(TMAG5273_I2C_ADDRESS_INITIAL, bus_handle, &hall_sensor));
-#endif
-#ifdef TEST_MODE
-    xTaskCreate(&test_buzzer, "test_buzzer", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
-    xTaskCreate(&test_servo, "test_servo", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
-    while (1)
-    {
-        // ESP_LOGI("hall", "%f\n", TMAG5273_getZData(&hall_sensor));
-
-        char buff[50] = {0};
-        sprintf(buff, "%2.4f;%d;%d;%d;%d;%d;%3.2f;%3.2f\n", 
-                // TMAG5273_getZData(&hall_sensor),
-                3.0,
-                sensors_obstacle_front(),
-                sensors_obstacle_back(),
-                sensors_obstacle_right(),
-                sensors_obstacle_left(),
-                sensors_tape_detected(),
-                motor_ctrl_ctx.m_left->speed,
-                motor_ctrl_ctx.m_right->speed);
-        bt_comms_send(buff);
-
-        if ((uxQueueMessagesWaiting(q) > 0) && (xQueueReceive(q, buff, (TickType_t)1) == pdTRUE))
-            ESP_LOGI("test", "recv: %s", buff);
-
-        vTaskDelay(pdMS_TO_TICKS(100));
-    }
-
-#endif
-
     bool obstacle_in_front = sensors_obstacle_front();
+    algorithm_state_e state = WAITING;
     while (1)
     {
-        vTaskDelay(pdMS_TO_TICKS(20));
+        vTaskDelay(pdMS_TO_TICKS(30));
         obstacle_in_front = sensors_obstacle_front() || sensors_tape_detected();
         // ESP_LOGI("main", "%d -> %d\n", state, obstacle_in_front);
         switch (state)
@@ -262,5 +215,68 @@ void app_main()
         default:
             state = WAITING;
         }
+    }
+}
+
+void app_main()
+{
+#ifdef USE_ULTRASONIC
+    ultrasonic_config(TRIGGER_PIN, ECHO_PIN);
+    xTaskCreate(measure_distance, "dist_meas", configMINIMAL_STACK_SIZE * 2, NULL, 5, NULL);
+#endif
+    QueueHandle_t q = xQueueCreate(5, MAX_MSG_LEN);
+    bt_comms_init(q);
+    // #ifndef TEST_MODE
+    initialize_motors();
+    // #endif
+    initalize_sensors();
+    // initalize_buzzer(BUZZER_PIN);
+    // buzzer_start();
+    initalize_servo(SERVO_PIN);
+    xTaskCreate(&test_servo, "servo", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
+#ifdef USE_TMAG5273
+    i2c_master_bus_config_t i2c_mst_config = {
+        .clk_source = I2C_CLK_SRC_DEFAULT,
+        .i2c_port = -1,
+        .scl_io_num = SCL_PIN,
+        .sda_io_num = SDA_PIN,
+        .glitch_ignore_cnt = 7,
+        .flags.enable_internal_pullup = true,
+    };
+
+    i2c_master_bus_handle_t bus_handle;
+    ESP_ERROR_CHECK(i2c_new_master_bus(&i2c_mst_config, &bus_handle));
+
+    TMAG5273_device_t hall_sensor;
+    ESP_ERROR_CHECK(TMAG5273_init(TMAG5273_I2C_ADDRESS_INITIAL, bus_handle, &hall_sensor));
+#endif
+    while (1)
+    {
+        // ESP_LOGI("hall", "%f\n", TMAG5273_getZData(&hall_sensor));
+
+        char buff[40] = {0};
+        sprintf(buff, "%2.4f;%d;%d;%d;%d;%d;%3.2f;%3.2f\n",
+                // TMAG5273_getZData(&hall_sensor),
+                3.0,
+                sensors_obstacle_front(),
+                sensors_obstacle_back(),
+                sensors_obstacle_right(),
+                sensors_obstacle_left(),
+                sensors_tape_detected(),
+                motor_ctrl_ctx.m_left->speed,
+                motor_ctrl_ctx.m_right->speed);
+        bt_comms_send(buff);
+
+        if (xQueueReceive(q, buff, (TickType_t)5) == pdTRUE)
+        {
+            if (strcmp(buff, "Start\n") == 0)
+            {
+                xTaskCreate(&algorithm, "algorithm", configMINIMAL_STACK_SIZE * 2, NULL, 2, NULL);
+                ESP_LOGI("test", "starting\n");
+            }
+            if (strcmp(buff, "Stop\n") == 0)
+                ESP_LOGI("test", "stopping\n");
+        }
+        vTaskDelay(pdMS_TO_TICKS(200));
     }
 }
