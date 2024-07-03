@@ -31,7 +31,8 @@ esp_err_t servo_set_angle(float angle)
 {
     uint32_t duty = (angle - SERVO_MIN_ANGLE) * (SERVO_MAX_US - SERVO_MIN_US) / (SERVO_MAX_ANGLE - SERVO_MIN_ANGLE) + SERVO_MIN_US; // us
     duty = duty * ((1 << SERVO_TIM_BITS) - 1) * SERVO_FREQ / 1e6;
-    return ledc_set_duty(LEDC_LOW_SPEED_MODE, SERVO_CHAN, duty);
+    ESP_RETURN_ON_ERROR(ledc_set_duty(LEDC_LOW_SPEED_MODE, SERVO_CHAN, duty), "servo", "ledc_set_duty failed");
+    return ledc_update_duty(LEDC_LOW_SPEED_MODE, SERVO_CHAN);
 }
 
 void test_servo(void *pvParameters)
@@ -39,7 +40,8 @@ void test_servo(void *pvParameters)
     float angle = 0.0;
     for (;;)
     {
-        servo_set_angle(angle);
+        ESP_LOGI("servo", "Setting: %f", angle);
+        ESP_ERROR_CHECK_WITHOUT_ABORT(servo_set_angle(angle));
         angle = (float)(rand() % 180);
         vTaskDelay(pdMS_TO_TICKS((rand() % 10) * 1000 + 500));
     }
