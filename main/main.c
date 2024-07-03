@@ -229,7 +229,7 @@ void app_main()
     while (1)
     {
         char buff[40] = {0};
-        sprintf(buff, "%2.4f;%d;%d;%d;%d;%d;%3.2f;%3.2f\n",
+        sprintf(buff, "%2.4f;%d;%d;%d;%d;%d;%3.2f;%3.2f;%d\n",
                 app_context.sensors.mag_z,
                 app_context.sensors.front,
                 app_context.sensors.back,
@@ -237,7 +237,8 @@ void app_main()
                 app_context.sensors.left,
                 app_context.sensors.tape,
                 app_context.motor_ctx.m_left.speed,
-                app_context.motor_ctx.m_right.speed);
+                app_context.motor_ctx.m_right.speed,
+                app_context.state);
         bt_comms_send(buff);
         vTaskDelay(pdMS_TO_TICKS(200));
     }
