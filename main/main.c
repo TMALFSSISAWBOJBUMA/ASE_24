@@ -221,7 +221,7 @@ void read_TMAG(void *pvParameters)
     app_context_t *ctx = (app_context_t *)pvParameters;
     i2c_master_bus_config_t i2c_mst_config = {
         .clk_source = I2C_CLK_SRC_DEFAULT,
-        .i2c_port = -1,
+        .i2c_port = I2C_NUM_0,
         .scl_io_num = SCL_PIN,
         .sda_io_num = SDA_PIN,
         .glitch_ignore_cnt = 7,
