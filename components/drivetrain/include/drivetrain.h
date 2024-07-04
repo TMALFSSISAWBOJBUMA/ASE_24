@@ -21,6 +21,7 @@ typedef struct
     pcnt_channel_handle_t encoder_channel;
     float speed;
     int32_t last_pulses;
+    float comp;
 } motor_driver_t;
 
 typedef struct

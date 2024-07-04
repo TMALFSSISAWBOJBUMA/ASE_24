@@ -46,6 +46,7 @@ void initialize_motor(motor_driver_config_t *config, motor_driver_t *driver)
         .group_id = 0,
         .resolution_hz = RESOLUTION_HZ,
     };
+    driver->comp = config->max_pwm_comp;
 
     ESP_ERROR_CHECK(bdc_motor_new_mcpwm_device(&motor_config, &mcpwm_config, &driver->motor));
     ESP_ERROR_CHECK(configure_pcnt(config->encoder, &driver->encoder, &driver->encoder_channel));

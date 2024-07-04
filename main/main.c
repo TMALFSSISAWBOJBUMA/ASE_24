@@ -36,9 +36,9 @@ void motors_direction(bool forward)
 
 void motors_speed(float speed)
 {
-    uint32_t speed_32 = speed / 100.0 * (RESOLUTION_HZ / PMW_FREQUENCY - 1);
-    bdc_motor_set_speed(app_context.motor_ctx.m_left.motor, speed_32);
-    bdc_motor_set_speed(app_context.motor_ctx.m_right.motor, speed_32);
+    speed = speed / 100.0 * (RESOLUTION_HZ / PMW_FREQUENCY - 1);
+    bdc_motor_set_speed(app_context.motor_ctx.m_left.motor, (uint32_t)(speed * app_context.motor_ctx.m_left.comp));
+    bdc_motor_set_speed(app_context.motor_ctx.m_right.motor, (uint32_t)(speed * app_context.motor_ctx.m_right.comp));
 }
 
 void motors_handler(void *args)
@@ -76,11 +76,12 @@ void initialize_motors()
         .encoder = SPEED_L,
         .fwd_pin = LEFT_FWD_PIN,
         .rev_pin = LEFT_REV_PIN,
-    };
+        .max_pwm_comp = 0.9f};
     initialize_motor(&motor_cfg, &app_context.motor_ctx.m_left);
     motor_cfg.encoder = SPEED_R;
     motor_cfg.fwd_pin = RIGHT_FWD_PIN;
     motor_cfg.rev_pin = RIGHT_REV_PIN;
+    motor_cfg.max_pwm_comp = 1.0f;
     initialize_motor(&motor_cfg, &app_context.motor_ctx.m_right);
 
     esp_timer_create_args_t periodic_timer_args = {
