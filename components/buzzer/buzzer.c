@@ -36,11 +36,13 @@ void buzzer_set_freq(uint32_t freq)
 void buzzer_start()
 {
     ledc_set_duty(LEDC_SPEED, BUZZ_CHAN, 2);
+    ledc_update_duty(LEDC_SPEED, BUZZ_CHAN);
 }
 
 void buzzer_stop()
 {
     ledc_set_duty(LEDC_SPEED, BUZZ_CHAN, 0);
+    ledc_update_duty(LEDC_SPEED, BUZZ_CHAN);
 }
 
 void test_buzzer(void *pvParameters)

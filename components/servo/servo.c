@@ -1,7 +1,7 @@
 #include "servo.h"
 
 #define SERVO_TIMER LEDC_TIMER_1
-#define SERVO_CHAN LEDC_CHANNEL_0
+#define SERVO_CHAN LEDC_CHANNEL_1
 #define SERVO_TIM_BITS LEDC_TIMER_10_BIT
 
 esp_err_t initalize_servo(gpio_num_t pin)

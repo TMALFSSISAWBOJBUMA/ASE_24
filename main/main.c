@@ -70,6 +70,21 @@ void motors_handler(void *args)
     // bt_comms_send(buff);
 }
 
+void buzzer_finish(void *pvParameters)
+{
+    uint16_t freq = 1200;
+    int8_t diff = 100;
+    buzzer_start();
+    for (;;)
+    {
+        buzzer_set_freq(freq);
+        freq += diff;
+        if (freq > 5000 || freq < 1200)
+            diff *= -1;
+        vTaskDelay(pdMS_TO_TICKS(80));
+    }
+}
+
 void initialize_motors()
 {
     motor_driver_config_t motor_cfg = {
@@ -174,11 +189,16 @@ void algorithm(void *pvParameters)
                 ESP_LOGI("algorithm", "starting");
                 ctx->run = true;
             }
-            if (strcmp(buff, "Stop\n") == 0)
+            else if (strcmp(buff, "Stop\n") == 0)
             {
                 ESP_LOGI("algorithm", "stopping");
                 ctx->run = false;
                 ctx->state = STOPPING;
+            }
+            else if (strcmp(buff, "Servo\n") == 0)
+            {
+                initalize_servo(SERVO_PIN);
+                xTaskCreate(&test_servo, "servo", configMINIMAL_STACK_SIZE * 2, NULL, 1, NULL);
             }
         }
 
@@ -188,6 +208,7 @@ void algorithm(void *pvParameters)
             {
                 ctx->state = FINISHED;
                 ESP_LOGI("algorithm", "finished");
+                xTaskCreate(&buzzer_finish, "buzzer", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
             }
         }
     }
@@ -227,12 +248,10 @@ void app_main()
 #endif
     app_context.TMAG_q = xQueueCreate(2, sizeof(float));
 #ifdef USE_TMAG5273
-    xTaskCreatePinnedToCore(read_TMAG, "hall", configMINIMAL_STACK_SIZE * 2, &app_context, 2, NULL, 1);
+    xTaskCreatePinnedToCore(read_TMAG, "hall", configMINIMAL_STACK_SIZE * 3, &app_context, 2, NULL, 1);
 #endif
     initalize_sensors();
-    // initalize_buzzer(BUZZER_PIN);
-    // initalize_servo(SERVO_PIN);
-    // xTaskCreate(&test_servo, "servo", configMINIMAL_STACK_SIZE * 2, NULL, 1, NULL);
+    initalize_buzzer(BUZZER_PIN);
     app_context.BT_q = xQueueCreate(5, MAX_MSG_LEN);
     xTaskCreate(&algorithm, "algorithm", configMINIMAL_STACK_SIZE * 2, &app_context, 1, NULL);
     bt_comms_init(app_context.BT_q);
