@@ -132,6 +132,8 @@ void algorithm(void *pvParameters)
         switch (ctx->state)
         {
         case FORWARD:
+            if (ctx->sensors.tape)
+                vTaskDelay(pdMS_TO_TICKS(200));
             if (ctx->sensors.front || ctx->sensors.tape)
             {
                 motors_speed(0);
