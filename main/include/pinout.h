@@ -22,13 +22,17 @@
 #define RIGHT_REV_PIN 25
 
 // IR obstacle sensors
-#define IR_FRONT 19
-#define IR_SIDE_L 36
-#define IR_SIDE_R 39
+#define IR_FRONT_R 17
+#define IR_FRONT_L 5
+#define IR_SIDE_LF 16
+#define IR_SIDE_LB 4
+#define IR_SIDE_RF 35
+#define IR_SIDE_RB 39
 #define IR_BACK 34
 
 // tape sensors
-#define IR_TAPE 18
+#define IR_TAPE_L 18
+#define IR_TAPE_R 19
 
 // speed feedback photocouplers
 #define SPEED_L 13
