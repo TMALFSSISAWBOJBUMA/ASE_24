@@ -58,3 +58,43 @@ void test_buzzer(void *pvParameters)
         vTaskDelay(pdMS_TO_TICKS(100));
     }
 }
+
+void play_melody(void *pvParameters)
+{
+    melody_t *melody = (melody_t *)pvParameters;
+
+    // this calculates the duration of a whole note in ms
+    uint16_t wholenote = (60000 * 4) / melody->tempo;
+
+    int16_t divider = 0, noteDuration = 0;
+    while (1)
+    {
+        for (int thisNote = 0; thisNote < melody->length; thisNote++)
+        {
+
+            // calculates the duration of each note
+            divider = melody->notes[2 * thisNote + 1];
+            if (divider > 0)
+            {
+                // regular note, just proceed
+                noteDuration = (wholenote) / divider;
+            }
+            else if (divider < 0)
+            {
+                // dotted notes are represented with negative durations!!
+                noteDuration = (wholenote) / abs(divider);
+                noteDuration *= 1.5; // increases the duration in half for dotted notes
+            }
+
+            if (melody->notes[2 * thisNote])
+            {
+                buzzer_start();
+                buzzer_set_freq(melody->notes[2 * thisNote]);
+            }
+
+            vTaskDelay(pdMS_TO_TICKS(noteDuration * 0.9));
+            buzzer_stop();
+            vTaskDelay(pdMS_TO_TICKS(noteDuration * 0.1));
+        }
+    }
+}
