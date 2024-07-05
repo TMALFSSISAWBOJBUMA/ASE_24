@@ -2,6 +2,7 @@
 #define __MAIN_H__
 
 #include <freertos/queue.h>
+#include <freertos/task.h>
 #include "drivetrain.h"
 
 typedef struct
@@ -36,6 +37,7 @@ typedef struct
     sensors_readout_t sensors;
     algorithm_state_e state;
     bool run;
+    TaskHandle_t music_task;
 } app_context_t;
 
 #endif

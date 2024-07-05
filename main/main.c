@@ -190,12 +190,15 @@ void algorithm(void *pvParameters)
             {
                 ESP_LOGI("algorithm", "starting");
                 ctx->run = true;
+                xTaskCreate(&play_melody, "melody", configMINIMAL_STACK_SIZE * 2, &imperial_march_melody, 1, &ctx->music_task);
             }
             else if (strcmp(buff, "Stop\n") == 0)
             {
                 ESP_LOGI("algorithm", "stopping");
                 ctx->run = false;
                 ctx->state = STOPPING;
+                vTaskDelete(ctx->music_task);
+                buzzer_stop();
             }
             else if (strcmp(buff, "Servo\n") == 0)
             {
@@ -210,7 +213,8 @@ void algorithm(void *pvParameters)
             {
                 ctx->state = FINISHED;
                 ESP_LOGI("algorithm", "finished");
-                xTaskCreate(&buzzer_finish, "buzzer", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
+                vTaskDelete(ctx->music_task);
+                xTaskCreate(&play_melody, "melody", configMINIMAL_STACK_SIZE * 2, &star_wars_melody, 1, &ctx->music_task);
             }
         }
     }
@@ -273,6 +277,6 @@ void app_main()
                 app_context.motor_ctx.m_right.speed,
                 app_context.state);
         bt_comms_send(buff);
-        vTaskDelay(pdMS_TO_TICKS(200));
+        vTaskDelay(pdMS_TO_TICKS(480));
     }
 }
